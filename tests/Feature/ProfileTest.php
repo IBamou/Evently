@@ -21,6 +21,23 @@ class ProfileTest extends TestCase
         $response->assertOk();
     }
 
+    public function test_profile_page_shows_the_authenticated_users_name_and_email(): void
+    {
+        $user = User::factory()->create([
+            'name' => 'Jane Doe',
+            'email' => 'jane@example.com',
+        ]);
+
+        $response = $this
+            ->actingAs($user)
+            ->get('/profile');
+
+        $response
+            ->assertOk()
+            ->assertSee('Jane Doe')
+            ->assertSee('jane@example.com');
+    }
+
     public function test_profile_information_can_be_updated(): void
     {
         $user = User::factory()->create();

@@ -1,0 +1,11 @@
+includes:
+    - vendor/larastan/larastan/extension.neon
+
+parameters:
+    paths:
+        - app
+
+    # strictest level for a small app; relax if noise outweighs value
+    level: 8
+
+    tmpDir: storage/framework/cache/phpstan

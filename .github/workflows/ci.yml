@@ -1,0 +1,63 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master, "feat/*", "feature/*"]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  ci:
+    name: Tests, Pint & PHPStan
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.4"
+          extensions: mbstring, dom, pdo_sqlite, fileinfo, bcmath, intl
+          coverage: none
+
+      - name: Cache Composer dependencies
+        uses: actions/cache@v4
+        with:
+          path: vendor
+          key: composer-${{ hashFiles('composer.lock') }}
+          restore-keys: composer-
+
+      - name: Install Composer dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Prepare environment
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+
+      - name: Cache npm dependencies
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: npm-${{ hashFiles('package-lock.json') }}
+          restore-keys: npm-
+
+      - name: Install npm dependencies
+        run: npm ci
+
+      - name: Build frontend assets
+        run: npm run build
+
+      - name: Code style (Pint)
+        run: vendor/bin/pint --test
+
+      - name: Static analysis (Larastan, level 8)
+        run: vendor/bin/phpstan analyse --no-progress --memory-limit=1G
+
+      - name: Run test suite
+        run: php artisan test --compact

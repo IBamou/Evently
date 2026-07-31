@@ -7,7 +7,7 @@
     $role = in_array($role, ['guest', 'user', 'organizer', 'admin'], true) ? $role : 'guest';
 @endphp
 
-<x-app-layout :activeRole="$role" :navRole="$role" :avatarRole="$role">
+<x-app-layout :activeRole="$role" :navRole="$role" :avatarRole="$role" :activeNav="'events'">
 @php
     $heroStats = [
         ['value' => '124', 'label' => 'Upcoming events'],

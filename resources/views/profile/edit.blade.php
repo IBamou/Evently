@@ -1,15 +1,38 @@
 {{-- Profile — pixel-port of design rProfile (lines 786–817).
-     Accepts $pageTitle prop (default 'My profile') for role reuse by big-pickle. --}}
+     Accepts $pageTitle prop (optional) for role reuse; falls back to a role-based title. --}}
+@props(['pageTitle' => null])
 
-<x-app-layout :activeRole="'user'" :navRole="'user'" :avatarRole="'user'">
-@props(['pageTitle' => 'My profile'])
-
+<x-app-layout :activeRole="'user'" :navRole="'user'" :avatarRole="'user'" :activeNav="'profile'">
 @php
-    $userName = 'Yassine Benali';
-    $userEmail = 'yassine@example.com';
-    $initial = 'YB';
-    $avatarBg = 'linear-gradient(135deg,#0EA5E9,#1565D8)';
-    $roleLabel = 'User';
+    // Real authenticated user (passed by ProfileController). A static demo
+    // fallback keeps the /preview/profile route working without a $user.
+    $profileUser = $user ?? null;
+    $userName = $profileUser?->name ?? 'Yassine Benali';
+    $userEmail = $profileUser?->email ?? 'yassine@example.com';
+
+    // Role value (string-backed enum value) with a fallback for previews.
+    $role = $profileUser?->role ?? null;
+    $roleValue = $role instanceof \BackedEnum ? $role->value : (string) ($role ?? 'user');
+    $roleValue = $roleValue !== '' ? $roleValue : 'user';
+
+    // Avatar gradient per role (same avatarMap values as the shell).
+    $avatarMap = [
+        'user' => 'linear-gradient(135deg,#0EA5E9,#1565D8)',
+        'organizer' => 'linear-gradient(135deg,#7C3AED,#1565D8)',
+        'admin' => 'linear-gradient(135deg,#DC2626,#F59E0B)',
+    ];
+    $avatarBg = $avatarMap[$roleValue] ?? $avatarMap['user'];
+
+    // Initials from the real name: first letters of first + last name.
+    $nameParts = preg_split('/\s+/', trim($userName));
+    $initial = strtoupper(mb_substr($nameParts[0] ?? '', 0, 1) . mb_substr($nameParts[1] ?? '', 0, 1));
+    $initial = $initial !== '' ? $initial : 'YB';
+
+    // Role badge label from the enum name (User / Organizer / Admin).
+    $roleLabel = $role instanceof \UnitEnum ? $role->name : ucfirst($roleValue);
+    // Single source of truth: a passed-in prop wins, otherwise derive from the role.
+    $pageTitle = $pageTitle ?: (in_array($roleValue, ['organizer', 'admin'], true) ? 'Account settings' : 'My profile');
+
     $roleBadgeBg = 'var(--chip)';
     $roleBadgeFg = 'var(--primary)';
 @endphp
@@ -40,12 +63,14 @@
                         <input type="text" name="name" value="{{ old('name', $userName) }}"
                                class="needs-focus"
                                style="min-height:46px;padding:12px 14px;border:1px solid var(--border);background:var(--surface2);border-radius:11px;font-size:14px;outline:none">
+                        @error('name')<span style="font-size:12px;color:var(--err)">{{ $message }}</span>@enderror
                     </label>
                     <label style="display:flex;flex-direction:column;gap:7px">
                         <span style="font-size:12.5px;font-weight:700">Email</span>
                         <input type="email" name="email" value="{{ old('email', $userEmail) }}"
                                class="needs-focus"
                                style="min-height:46px;padding:12px 14px;border:1px solid var(--border);background:var(--surface2);border-radius:11px;font-size:14px;outline:none">
+                        @error('email')<span style="font-size:12px;color:var(--err)">{{ $message }}</span>@enderror
                     </label>
                 </div>
                 <button type="submit" style="margin-top:18px;border:0;cursor:pointer;background:var(--primary);color:#fff;font-weight:700;font-size:14px;padding:13px 22px;border-radius:12px;min-height:46px">Save changes</button>
@@ -79,6 +104,24 @@
                     </label>
                 </div>
                 <button type="submit" style="margin-top:18px;border:1px solid var(--border);background:var(--surface2);cursor:pointer;font-weight:700;font-size:14px;padding:13px 22px;border-radius:12px;min-height:46px">Update password</button>
+            </form>
+        </div>
+
+        {{-- Card 3: Delete account (danger zone) --}}
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:24px">
+            <h2 style="margin:0 0 8px;font-size:16px;font-weight:800">Delete account</h2>
+            <p style="margin:0 0 18px;font-size:13.5px;line-height:1.6;color:var(--muted);font-weight:600">Once your account is deleted, all of its resources and data will be permanently deleted. This cannot be undone.</p>
+            <form method="POST" action="{{ route('profile.destroy') }}" onsubmit="return confirm('This action permanently deletes your account. Continue?')">
+                @csrf
+                @method('DELETE')
+                <div style="display:flex;flex-direction:column;gap:7px;max-width:360px">
+                    <span style="font-size:12.5px;font-weight:700">Confirm password</span>
+                    <input type="password" name="password" required placeholder="Confirm your password"
+                           class="needs-focus"
+                           style="min-height:46px;padding:12px 14px;border:1px solid var(--border);background:var(--surface2);border-radius:11px;font-size:14px;outline:none">
+                    @error('password', 'userDeletion')<span style="font-size:12px;color:var(--err)">{{ $message }}</span>@enderror
+                </div>
+                <button type="submit" style="margin-top:18px;border:0;cursor:pointer;background:linear-gradient(135deg,#DC2626,#B91C1C);color:#fff;font-weight:800;font-size:14px;padding:13px 22px;border-radius:12px;min-height:46px">Delete account</button>
             </form>
         </div>
     </div>

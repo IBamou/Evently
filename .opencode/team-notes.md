@@ -562,16 +562,143 @@ The design JS (line 1568) hardcodes `sidebarOn: false` and `navGroups: []` for A
 - User asked for a guide so a friend can replicate the 3-agent team setup. Created `3-agent-team-setup.md` (project root): explains the pattern, includes copy-paste `opencode.json` (agents build/mimo/big-pickle + prompts), `.opencode/team-notes.md` blackboard template, optional `AGENTS.md`, workflow rules, troubleshooting, and a checklist for the friend.
 - Verified the real config lives in project `opencode.json` (agents defined there, not global) + global `~/.config/opencode/opencode.json` only has chrome-devtools MCP.
 
-### build � Final review round (2026-07-31): audit results + fixes
+### build � Final review round (2026-07-31): audit results + fixes
 
 - Team-wide audit (mimo: guest/user pages; big-pickle: layout+org/admin): NO blockers. All 14 pages PASS WITH MINOR or better.
 - FIXED (build):
-  1. Mojibake (triple-encoded UTF-8/CP1252) in bookings/index, bookings/show, tickets/index, profile/edit � byte-level repair of 5 corrupt sequences; 0 remaining; "H�tel Sofitel" now correct.
+  1. Mojibake (triple-encoded UTF-8/CP1252) in bookings/index, bookings/show, tickets/index, profile/edit � byte-level repair of 5 corrupt sequences; 0 remaining; "H�tel Sofitel" now correct.
   2. Auth pages (login/register/forgot) now render INSIDE x-app-layout like the design (header w/ role tabs + guest nav, activeNav login/register/forgot) instead of standalone HTML; internal links ? /preview/*.
   3. Header nav styled per design L275-281: 14px, gap 4px, pad 10px 14px, min-h 44px, active 800/primary/2px underline, inactive 600/--text.
   4. Alpine double-instance warning: removed Alpine.start() from app.js (Livewire 4 bundles Alpine); bundle 94.8?48.6 kB; dark toggle + register role selector still work.
   5. Dead CTAs wired: +New event (odash, oevents)?/preview/create; Back to my events?/preview/oevents; Details buttons (ubookings)?/preview/booking; booking back link preserves ?role=user.
-  6. Admin console: only active segmented tab's section renders (?tab=Users|Reports, default Approvals) � matches design aTab.
+  6. Admin console: only active segmented tab's section renders (?tab=Users|Reports, default Approvals) � matches design aTab.
   7. odash dashTitle per design L1593: ?role=admin ? "Platform dashboard" (verified), else "Welcome back, Salma".
-- KNOWN ACCEPTED (documented, not blockers): scan QR pattern differs from design's JS float64 math (~128 of 325 cells) � invisible to human eye; header overflow at <900px (design behaves identically); create wizard is step 1 only (design default cstep:1); event-card role param reviewed as false-positive (code includes ?role=, verified live).
+- KNOWN ACCEPTED (documented, not blockers): scan QR pattern differs from design's JS float64 math (~128 of 325 cells) � invisible to human eye; header overflow at <900px (design behaves identically); create wizard is step 1 only (design default cstep:1); event-card role param reviewed as false-positive (code includes ?role=, verified live).
 - VERIFIED live in Chrome: login shows shell+active "Sign in", tickets page zero mojibake, admin ?tab switching, Platform dashboard title, Alpine selector, dark mode, 25 tests pass, build clean.
+
+### big-pickle — Round 6 AUTHORIZATION (middleware + auth-aware shell + profile wiring, 2026-07-31)
+
+**Files created:**
+1. `app/Http/Middleware/EnsureRole.php` — `handle(Request, Closure, string ...$roles): Response`. Guest → `redirect()->route('login')`; role not in $roles → `abort(403)`. Accepts enum values ('user') AND enum names ('User') via `$user->role->value`/`->name` (defensive fallback to raw string if cast missing).
+2. `tests/Feature/EnsureRoleTest.php` — 5 tests: guest→login redirect, wrong role→403, matching role→200, enum-name accepted, multiple roles accepted. Test routes defined via `Route::middleware('role:…')` inside tests.
+3. `tests/Feature/RoleRedirectTest.php` — 3 tests for /dashboard: user→profile.edit redirect, organizer→organizer.dashboard ('Welcome back'), admin→admin.index ('Admin console').
+
+**Files modified:**
+- `bootstrap/app.php` — `$middleware->alias(['role' => EnsureRole::class])`.
+- `resources/views/layouts/app.blade.php` — auth-aware shell: `$authRole = auth()->check() ? auth()->user()->role->value : null`; logged-in → activeRole/navRole/avatarRole forced to REAL role (per-view props + ?role= ignored); role-tabs strip wrapped in `@guest`; avatar initials for logged-in = real name first+last letters (gradient still by real role); logged-in nav 'Profile' item → real `route('profile.edit')` (other nav stays on preview routes). Guest preview behavior unchanged.
+- `resources/views/profile/edit.blade.php` — wired to `$user` from ProfileController: name/email, initials from real name, gradient by role (user #0EA5E9→#1565D8 / organizer #7C3AED→#1565D8 / admin #DC2626→#F59E0B), badge label from role (User/Organizer/Admin), pageTitle 'Account settings' for organizer/admin. Demo fallback keeps `/preview/profile` working (no $user). Added `:activeNav="'profile'"`.
+- `routes/web.php` — /dashboard now `match ($role)`: Organizer→organizer.dashboard, Admin→admin.index, default→redirect profile.edit.
+- `tests/Feature/ProfileTest.php` — added `test_profile_page_shows_the_authenticated_users_name_and_email`.
+
+**Verification:** `php -l` ×6 clean, Pint clean, `view:cache` OK. `php artisan test --compact --filter=EnsureRole` → 5 passed; full suite → **38 passed (86 assertions)**. Browser-verified (evently.test): guest keeps tabs+guest nav+G avatar; logged-in user → no role tabs, user nav, real initials, /profile shows real name/email + USER badge; logged-in admin → admin nav, admin console, DU avatar.
+
+**Decisions/notes for team:** (1) Nav hrefs for logged-in users still point to /preview/* except Profile (only real route that exists) — flag if we want real routes wired later. (2) ⚠️ phpunit.xml has sqlite DB commented out → tests run against dev MySQL `evently` and RefreshDatabase WIPES dev data (my demo user got deleted by a teammate's test run). Recommend switching tests to sqlite :memory: (build/user decision). (3) Didn't touch: app/Enums, migrations, User model, RegisteredUserController, register view, auth.php, /preview routes.
+
+### build � Round 6 plan: AUTHENTICATION & AUTHORIZATION (2026-07-31, branch feat/authentication-autherization)
+
+USER DIRECTIVE: No CRUD. Only auth/authz: UserRole enum (user/organizer/admin, NO guest), register as user or organizer (admin never), link UI views to backend, make:admin command (email+password: exists?prompt promote, not?create), role middleware.
+USER ANSWERS: (1) Role-tabs strip hidden for LOGGED-IN users, shell follows real role; guests keep preview strip. (2) Register role = simple CHECKBOX (checked?organizer, else user). (3) Command name: make:admin. (4) /preview/* stay public.
+ASSIGNMENT:
+- mimo: app/Enums/UserRole.php (User/Organizer/Admin, TitleCase) + migration add role (default user) + User model (fillable role, casts() enum, isAdmin/isOrganizer helpers) + UserFactory role + RegisteredUserController (validate role in:user,organizer, default user; checkbox input 'organizer' = checked ? organizer : user) + register.blade.php checkbox replacing the 2-card Alpine selector + tests (register as user/organizer, admin rejected/ignored).
+- big-pickle: app/Http/Middleware/EnsureRole.php (role:admin,organizer...) + alias 'role' in bootstrap/app.php + layout: auth-aware shell (logged-in ? real role nav/avatar, NO role tabs; guest ? ?role= preview strip) + profile/edit.blade.php wired to real  (name/email/initials/badge from role) + /dashboard redirect by role (user?/preview/profile? real: user?profile route; organizer?organizer dashboard; admin?admin console) + middleware tests.
+- build: make:admin command (exists?prompt promote; not?create admin) + test + final merge/verify/browser.
+
+### mimo — Auth Part 1: Roles + Registration (2026-07-31)
+
+**Files created:**
+1. `app/Enums/UserRole.php` — Enum with 3 TitleCase cases: `User = 'user'`, `Organizer = 'organizer'`, `Admin = 'admin'`. Helpers: `label(): string`, `isAdmin(): bool`, `isOrganizer(): bool`.
+2. `database/migrations/2026_07_31_132306_add_role_to_users_table.php` — Adds `role` string column, `default('user')`, `after('email')`, not nullable. Down: `dropColumn('role')`.
+
+**Files modified:**
+3. `app/Models/User.php` — Added `'role'` to `$fillable`; added `'role' => UserRole::class` to `casts()`; added `isAdmin(): bool` and `isOrganizer(): bool` methods.
+4. `database/factories/UserFactory.php` — Added `'role' => UserRole::User` to definition (default = User). Added `asOrganizer()` and `asAdmin()` state methods. Existing tests unaffected (default = User).
+5. `app/Http/Controllers/Auth/RegisteredUserController.php` — Added `'organizer' => ['sometimes', 'boolean']` validation. Role assigned via `$request->boolean('organizer')` — checked = Organizer, unchecked/absent = User. Admin never assignable via registration.
+6. `resources/views/auth/register.blade.php` — Replaced 2-card Alpine `x-data` role selector with a simple checkbox: `<input type="checkbox" name="organizer" value="1">` + label "Create events as an organizer". Layout wrapper untouched.
+7. `tests/Feature/Auth/RegistrationTest.php` — Extended (kept 2 original tests). Added 4 new: default user registration, organizer checkbox, admin rejection, non-boolean organizer rejected. **6 tests, 14 assertions, ALL PASS.**
+
+**Verification:**
+- Migration ran successfully (`php artisan migrate`).
+- Pint passed clean (auto-fixed User.php + UserFactory import ordering).
+- **38/38 tests pass** (full suite), including the 6 registration tests.
+- No regressions in any other test.
+
+**Decisions:**
+- Checkbox approach: `name="organizer" value="1"` — simple, no hidden fields needed. Backend uses `$request->boolean('organizer')`.
+- Admin rejection: sending `role=admin` in form data is silently ignored (not in validation rules, not in controller logic) — user gets `UserRole::User`. Sending `organizer=admin` fails validation (not boolean) — 422 error, no user created. Both paths prevent admin at registration.
+- Factory default: `role => UserRole::User` ensures zero breakage in existing Breeze tests.
+
+### build - Round 6 AUTH: DONE (2026-07-31)
+
+- mimo + big-pickle deliverables merged, reviewed, Pint clean. Full suite: **43 passed (105 assertions)**.
+- Fixed last failing test (MakeAdminCommandTest declines): Laravel's askQuestion test mock returns raw strings, so confirm() got truthy 'no' and promoted. Fix: use expectsConfirmation() (converts to bool) instead of expectsQuestion(); also fixed mojibake em-dash in MakeAdmin abort message ('Aborted - nothing changed.').
+- phpunit.xml: switched tests to sqlite :memory: (was running RefreshDatabase against dev MySQL, wiping it).
+- make:admin command (promote-or-create) + 5 TestCase-style tests. NOTE: no tests/Pest.php in this repo - Pest function-style tests fail; use Tests\Feature TestCase classes.
+- Browser-verified live: register organizer (checkbox) -> dashboard/organizer console + org nav + OT avatar; register user -> /profile + user nav; role tabs hidden when logged in (guest keeps them); profile shows real name/email/USER badge; make:admin live promote worked; admin login -> Admin console + Approvals/Users/Reports tabs.
+- Dev DB intact (role column OK, 0 users - wiped earlier by pre-sqlite test runs, recreatable via register).
+- Uncommitted on feat/authentication-autherization: enums, migration, middleware+alias, auth-aware layout, profile wiring, dashboard redirect, register checkbox, make:admin, phpunit fix, 6 test files (EnsureRole, RoleRedirect, MakeAdminCommand, RegistrationRole, RegistrationTest, ProfileTest).
+
+## USER DIRECTIVE - NO COMMITS WITHOUT PERMISSION (2026-07-31)
+
+- Do NOT commit or push EVER until the user explicitly tells us to. Branch feat/authentication-autherization has uncommitted auth work (Round 6) + the register label tweak - leave it uncommitted.
+- Label change applied: register checkbox now reads "Register as organizer" (was "Create events as an organizer") - verified live at /register, checkbox name=organizer unchanged, no tests reference the old label.
+
+### build - RegisterRequest FormRequest (2026-07-31)
+
+- User asked for a FormRequest for registration, named Auth/RegisterRequest "like login". Created app/Http/Requests/Auth/RegisterRequest.php mirroring LoginRequest convention (authorize true, rules(): name/email unique/password confirmed Password::defaults()/organizer sometimes boolean).
+- RegisteredUserController@store now type-hints RegisterRequest (inline ->validate removed; unused imports cleaned). Validation behavior unchanged - same rules.
+- 43/43 tests pass, Pint clean. Browser-verified: register w/ checkbox -> organizer console; duplicate email -> 'The email has already been taken.' renders on the page (HTML5 type=email blocks malformed emails client-side before server).
+
+## Progress
+- big-pickle (audit, branch feat/authentication-autherization): reviewed shell/auth/profile/routes/tests. CLEAN: no mojibake in listed views; avatar uses real initials for logged-in (no G/Salma leak); shell forces real role so ?role= can't spoof header; register organizer checkbox wired (RegisterRequest:31 + RegisteredUserController:30-39); tests follow Tests\Feature convention. ISSUES: no logout UI for logged-in users (app.blade.php navItems/avatar, Breeze navigation.blade.php unused); profile.destroy route+controller exist but no delete-account form; real /login+/register link to /preview/* pages; logged-in nav (except Profile) stays on static /preview/*; home.blade.php:10 no :activeNav -> organizer/admin on events page see Dashboard/Admin tab active; dashboard match default arm unreachable + user redirected to profile.edit not events; profile update form has no @error display; profile/edit @props after x-app-layout and pageTitle prop dead (overridden :34); logo link always /preview/events; 'role' middleware alias registered but unused; app.blade.php:30 ->role->value assumes non-null role.
+
+### mimo — Backend audit fixes (2026-07-31, branch feat/authentication-autherization)
+
+**Files changed (7 total):**
+1. `tests/Feature/RegistrationRoleTest.php` — **DELETED** (empty placeholder; all role tests live in RegistrationTest.php)
+2. `app/Http/Controllers/Auth/RegisteredUserController.php` — Removed redundant `Hash::make()` (User model has `hashed` cast); removed unused `use Illuminate\Support\Facades\Hash` import. Passes plain `$request->password` now, matching Breeze convention.
+3. `app/Console/Commands/MakeAdmin.php` — Same `Hash::make()` removal. Fixed PHPStan candidate: `ucfirst(strtok($email, '@'))` → `$defaultName = ucfirst(strtok($email, '@') ?: 'Admin')` to handle `strtok` returning `false`.
+4. `routes/auth.php` — Added `throttle:5,1` middleware to registration POST route (5/min, mirrors login security posture).
+5. `resources/views/auth/login.blade.php` — Swapped `/preview/forgot` → `route('password.request')`, `/preview/register` → `route('register')`.
+6. `resources/views/auth/register.blade.php` — Swapped `/preview/login` → `route('login')`.
+7. `resources/views/auth/forgot-password.blade.php` — Swapped `/preview/login` → `route('login')`.
+
+**Verification:**
+- `php artisan test --compact --filter="Registration|MakeAdmin"` → **11 passed (33 assertions)**
+- `vendor/bin/pint --dirty --format agent` → auto-fixed blank lines in MakeAdmin.php + RegisteredUserController.php
+- Re-ran tests after Pint → **11 passed (33 assertions)** — no regressions.
+
+**No issues.** All changes behavior-neutral (hashed cast is idempotent), Pint-clean, tests green.
+
+### big-pickle — Auth audit fixes (views only, 2026-07-31, branch feat/authentication-autherization)
+
+**Files changed (3 views):**
+1. `resources/views/layouts/app.blade.php`:
+   - Avatar (line ~198): authenticated users now get an Alpine dropdown (name + email + "Sign out" POST form → route('logout') with @csrf); guests keep the static role-preview avatar. aria: button role, aria-haspopup, :aria-expanded, Escape closes, @click.outside closes.
+   - ⚠️ CRITICAL FINDING: nested `x-data="{ open: false }"` scopes DON'T react here — `open` toggles but `x-show` never updates (verified: `_x_runEffects` evaluates falsy; Alpine 3.15.12 via Livewire 4). Also x-transition + x-cloak combo broke it. Root-scope state works at any depth (theme toggle pattern). FIX: state lives on the ROOT x-data as `accountMenuOpen`; `@click.outside` moved to the WRAPPER div (button sits inside it so clicking the avatar doesn't instantly close). Verified live: open/close/outside/Escape all work.
+   - Logo (line ~135): @auth → route('dashboard') (role-redirects); guests keep /preview/events + roleSuffix.
+   - Null-safe role (line ~30): `auth()->user()->role?->value`.
+   - Guest nav (lines ~142-152): 'login'/'register' keys → real route('login')/route('register'); 'events' stays preview; logged-in Profile → route('profile.edit') unchanged. Implemented via match(true).
+2. `resources/views/home.blade.php` (line 10): added `:activeNav="'events'"` — events/browse page now highlights "Events"/"Browse" for ALL roles (verified organizer+admin preview show Browse active, logged-in user shows Events active).
+3. `resources/views/profile/edit.blade.php`:
+   - @props moved ABOVE `<x-app-layout>`; `$pageTitle` single-source: `$pageTitle ?: (role-based)` (passed prop wins, else 'Account settings' for org/admin / 'My profile').
+   - @error('name') + @error('email') spans under inputs (font-size:12px;color:var(--err), same as register).
+   - NEW Card 3 "Delete account": surface/border/radius-18px card, warning text, password input (name=password, required, placeholder "Confirm your password"), destructive button (linear-gradient(135deg,#DC2626,#B91C1C), #fff, fw800) POSTing DELETE to route('profile.destroy') with @csrf/@method, `onsubmit="return confirm('This action permanently deletes your account. Continue?')"`, plus `@error('password', 'userDeletion')` span. Verified live: wrong password → "The password is incorrect." renders under the input (redirect back to /profile, bag works).
+
+**Verification:** view:cache OK, `pint --dirty` clean, `php artisan test --compact --filter="Profile|Authentication"` → **11 passed (34 assertions)**. Browser smoke done end-to-end: login (demo-user@evently.test / password123) → logo → /dashboard, avatar dropdown opens/closes/outside/Escape, Sign out POSTs to /logout → redirect / with guest shell restored (role tabs, static G avatar, Sign in/Create account → real routes). Did NOT touch: app/ PHP, routes, tests.
+
+**Open note for team:** the nested-x-data reactivity bug affects ANY future nested x-data/x-show pattern in this layout (Livewire 4 + Alpine 3.15.12). Workaround used: put state in the root x-data scope. Also flagged: clicking avatar now has no slide animation (x-transition dropped — it was part of the broken combo); dropdown is instant, matching theme-toggle behavior.
+
+### build - FINAL REVIEW + CI + LARASTAN (2026-07-31)
+
+- Team audits (mimo: backend; big-pickle: layout/routes/views) - real findings all fixed:
+  - Logout UI: avatar dropdown (Alpine, root-scope state - nested x-data does NOT react in this Livewire/Alpine stack) with name/email + Sign out POST; logo -> route('dashboard') for logged-in; null-safe role?->value; guest nav Sign in/Create account -> real routes; events page :activeNav=events; profile @error spans + @props cleanup + Delete account card (DELETE /profile, userDeletion error bag); auth views (login/register/forgot) link to named routes; POST /register throttled 5,1; redundant Hash::make removed (hashed cast is idempotent - Laravel 12 HasAttributes::castAttributeAsHashedString uses Hash::isHashed); deleted empty RegistrationRoleTest placeholder.
+  - 'role' removed from  NO - kept (controller/command set it explicitly; mass-assignment needs fillable; audit suggestion declined, documented). Role column index: skipped (premature).
+- **Larastan installed** (larastan/larastan ^3.10, dev). phpstan.neon: level 8, paths app, tmpDir storage/framework/cache/phpstan. Fixed 21 -> 0 errors:
+  - KEY: Larastan infers model property types from MIGRATIONS (string) overriding enum casts -> add class-level @property UserRole  docblock ABOVE class User (docblock above trait use is NOT the class docblock).
+  - Breeze controllers: $user = ->user(); if (!) abort(403); guard pattern (PHPStan doesn't narrow repeated ->user() calls).
+  - VerifyEmailController: User model now implements MustVerifyEmail (base class already uses the trait; Breeze tests assume it). NOTE: this ACTIVATED the 'verified' middleware on /dashboard -> removed 'verified' from /dashboard to keep register->console flow (verification available but not enforced).
+  - ProfileUpdateRequest: $this->user()?->id.
+  - Run with --memory-limit=1G (default 128M OOMs on Windows).
+- **GitHub Actions**: .github/workflows/ci.yml - ubuntu, PHP 8.4, composer+npm caches, cp .env.example + key:generate, npm ci + npm run build (Vite manifest needed - feature tests render views), pint --test, phpstan, php artisan test. YAML validated via symfony/yaml.
+- Pint: fixed 2 pre-existing scaffold files (bootstrap/providers.php, config/auth.php - newer fixers), full-repo --test now passes.
+- FINAL STATE: 43 tests / 105 assertions PASS, PHPStan level 8: 0 errors, Pint clean, browser-verified (logout dropdown, delete card, register->console flows, no verification wall). ALL UNCOMMITTED (user rule: no commits without permission).

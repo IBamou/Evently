@@ -53,31 +53,17 @@
                         @error('password_confirmation')<span style="font-size:12px;color:var(--err)">{{ $message }}</span>@enderror
                     </label>
 
-                    {{-- Role selector --}}
-                    <div x-data="{ role: 'user' }">
-                        <div style="font-size:12.5px;font-weight:700;margin-bottom:8px">I want to…</div>
-                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-                            <button type="button" @click="role = 'user'"
-                                    :style="role === 'user'
-                                        ? 'text-align:left;padding:14px;border:1.5px solid var(--primary);background:var(--chip);border-radius:13px;cursor:pointer;min-height:44px'
-                                        : 'text-align:left;padding:14px;border:1.5px solid var(--border);background:var(--surface);border-radius:13px;cursor:pointer;min-height:44px'">
-                                <div style="font-size:13.5px;font-weight:800;margin-bottom:3px">Attend events</div>
-                                <div style="font-size:11.5px;color:var(--muted);font-weight:600">Book &amp; keep tickets</div>
-                            </button>
-                            <button type="button" @click="role = 'organizer'"
-                                    :style="role === 'organizer'
-                                        ? 'text-align:left;padding:14px;border:1.5px solid var(--primary);background:var(--chip);border-radius:13px;cursor:pointer;min-height:44px'
-                                        : 'text-align:left;padding:14px;border:1.5px solid var(--border);background:var(--surface);border-radius:13px;cursor:pointer;min-height:44px'">
-                                <div style="font-size:13.5px;font-weight:800;margin-bottom:3px">Create events</div>
-                                <div style="font-size:11.5px;color:var(--muted);font-weight:600">Sell &amp; check in</div>
-                            </button>
-                        </div>
-                    </div>
+                    {{-- Organizer checkbox --}}
+                    <label style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:10px 14px;border:1px solid var(--border);background:var(--surface);border-radius:12px;min-height:44px">
+                        <input type="checkbox" name="organizer" value="1"
+                               style="width:17px;height:17px;border-radius:5px;border:1.5px solid var(--border);accent-color:var(--primary);cursor:pointer">
+                        <span style="font-size:14px;font-weight:700">Register as organizer</span>
+                    </label>
 
                     <button type="submit" style="margin-top:4px;border:0;cursor:pointer;background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:#fff;font-weight:800;font-size:15px;padding:15px;border-radius:13px;min-height:52px">Create account</button>
 
                     <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:4px">
-                        <a href="/preview/login" style="border:0;background:none;cursor:pointer;font-size:13px;font-weight:700;color:var(--primary);padding:6px 0;text-decoration:none">Already have an account? Sign in</a>
+                        <a href="{{ route('login') }}" style="border:0;background:none;cursor:pointer;font-size:13px;font-weight:700;color:var(--primary);padding:6px 0;text-decoration:none">Already have an account? Sign in</a>
                     </div>
                 </div>
             </form>

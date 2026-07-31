@@ -1,13 +1,23 @@
 <?php
 
+use App\Enums\UserRole;
 use App\Http\Controllers\ProfileController;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
 Route::view('/', 'home');
 
 Route::get('/dashboard', function () {
-    return view('dashboard');
-})->middleware(['auth', 'verified'])->name('dashboard');
+    $role = Auth::user()->role;
+
+    // Home page per role: users land on their profile, organizers on their
+    // dashboard and admins on the admin console.
+    return match ($role) {
+        UserRole::Organizer => view('organizer.dashboard'),
+        UserRole::Admin => view('admin.index'),
+        default => redirect()->route('profile.edit'),
+    };
+})->middleware(['auth'])->name('dashboard');
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');

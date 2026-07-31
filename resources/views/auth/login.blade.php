@@ -39,8 +39,8 @@
                     <button type="submit" style="margin-top:4px;border:0;cursor:pointer;background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:#fff;font-weight:800;font-size:15px;padding:15px;border-radius:13px;min-height:52px">Sign in</button>
 
                     <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:4px">
-                        <a href="/preview/forgot" style="border:0;background:none;cursor:pointer;font-size:13px;font-weight:700;color:var(--primary);padding:6px 0;text-decoration:none">Forgot password?</a>
-                        <a href="/preview/register" style="border:0;background:none;cursor:pointer;font-size:13px;font-weight:700;color:var(--primary);padding:6px 0;text-decoration:none">Create an account</a>
+                        <a href="{{ route('password.request') }}" style="border:0;background:none;cursor:pointer;font-size:13px;font-weight:700;color:var(--primary);padding:6px 0;text-decoration:none">Forgot password?</a>
+                        <a href="{{ route('register') }}" style="border:0;background:none;cursor:pointer;font-size:13px;font-weight:700;color:var(--primary);padding:6px 0;text-decoration:none">Create an account</a>
                     </div>
                 </div>
             </form>
