@@ -1,3 +1,134 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* ── Match design typography: design has NO global line-height (elements set their own) ── */
+html {
+  line-height: normal;
+}
+
+/* ── Design tokens (light) ── */
+:root {
+  --primary: #1565D8;
+  --primary-dark: #0B4BAA;
+  --cyan: #0EA5E9;
+  --teal: #14B8A6;
+  --bg: #F4F9FF;
+  --surface: #FFFFFF;
+  --surface2: #F7FBFF;
+  --border: #E1ECF9;
+  --text: #0B2545;
+  --muted: #5B7794;
+  --shadow: 0 1px 2px rgba(11,37,69,.05), 0 10px 28px rgba(11,37,69,.06);
+  --ok: #16A34A;
+  --warn: #D97706;
+  --err: #DC2626;
+  --hero1: #EAF5FF;
+  --hero2: #D3EAFF;
+  --hero3: #B9DDFA;
+  --chip: #EEF6FF;
+  --header-bg: rgba(255,255,255,.88);
+}
+
+/* ── Design tokens (dark) ── */
+html[data-theme="dark"] {
+  --bg: #071426;
+  --surface: #0E2138;
+  --surface2: #122844;
+  --border: #1D3A5C;
+  --text: #E6F1FB;
+  --muted: #8FAAC6;
+  --shadow: 0 1px 2px rgba(0,0,0,.4), 0 12px 32px rgba(0,0,0,.35);
+  --hero1: #08182B;
+  --hero2: #0C2540;
+  --hero3: #123055;
+  --chip: #12294552;
+  --header-bg: rgba(14,33,56,.85);
+}
+
+/* ── Base resets ── */
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+a { color: var(--primary); text-decoration: none; }
+a:hover { color: var(--primary-dark); }
+
+input, select, textarea, button { font-family: inherit; color: inherit; }
+input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+::selection { background: #BFDCFF; color: #0B2545; }
+
+/* ── Keyframes / animations ── */
+@keyframes wave {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+
+@keyframes bob {
+  0%, 100% { transform: translateY(0) rotate(-2.5deg); }
+  50%      { transform: translateY(-12px) rotate(2.5deg); }
+}
+
+@keyframes drift {
+  from { transform: translateX(-20%); }
+  to   { transform: translateX(120%); }
+}
+
+@keyframes glow {
+  0%, 100% { opacity: .5;  transform: scale(1); }
+  50%      { opacity: .85; transform: scale(1.08); }
+}
+
+@keyframes up {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: none; }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes marq {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+
+@keyframes rise {
+  0%   { transform: translateY(10px); opacity: 0; }
+  25%  { opacity: .65; }
+  100% { transform: translateY(-150px); opacity: 0; }
+}
+
+@keyframes scanline {
+  0%, 100% { top: 16%; }
+  50%      { top: 82%; }
+}
+
+@keyframes ping {
+  0%   { box-shadow: 0 0 0 0 rgba(21,101,216,.4); }
+  70%  { box-shadow: 0 0 0 16px rgba(21,101,216,0); }
+  100% { box-shadow: 0 0 0 0 rgba(21,101,216,0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition: none !important; }
+}
+
+/* .ev-card hover — moved from home.blade.php inline style */
+.ev-card { transition: transform .2s ease, box-shadow .2s ease; }
+.ev-card:hover { transform: translateY(-4px); box-shadow: var(--shadow); }
+
+/* Focus ring utility — beats inline outline:none on inputs */
+.needs-focus:focus-visible { outline: 2px solid var(--primary) !important; outline-offset: 2px; }
