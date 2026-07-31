@@ -702,3 +702,20 @@ ASSIGNMENT:
 - **GitHub Actions**: .github/workflows/ci.yml - ubuntu, PHP 8.4, composer+npm caches, cp .env.example + key:generate, npm ci + npm run build (Vite manifest needed - feature tests render views), pint --test, phpstan, php artisan test. YAML validated via symfony/yaml.
 - Pint: fixed 2 pre-existing scaffold files (bootstrap/providers.php, config/auth.php - newer fixers), full-repo --test now passes.
 - FINAL STATE: 43 tests / 105 assertions PASS, PHPStan level 8: 0 errors, Pint clean, browser-verified (logout dropdown, delete card, register->console flows, no verification wall). ALL UNCOMMITTED (user rule: no commits without permission).
+
+### PENDING - NEXT BRANCH (user decision 2026-07-31)
+
+- CI dedupe: change .github/workflows/ci.yml triggers from push(branches: [main, master, feat/*, feature/*]) + pull_request to push(branches: [main, master]) + pull_request, so feature-branch pushes with open PRs don't double-run CI. Apply as FIRST change when the next branch starts (user: "fix that in the next branch").
+- feat/authentication-autherization branch: committed 328bd6c, pushed, CI running - NO merge to main yet (user: "no problem for this branch").
+
+## NEW BRANCH: feature/event-management (2026-07-31)
+
+- Created from feat/authentication-autherization (contains auth work, unmerged to main - merging feature/event-management later will bring auth along).
+- First commit 3cadca7: CI dedupe applied (push: [main, master] + pull_request). NOT pushed yet.
+- Scope: EVENT MANAGEMENT - awaiting user spec (likely: events CRUD, organizer create/manage events, check-in, bookings, approval workflow? - CONFIRM with user before implementing).
+- Team rules still apply: no commits/pushes without permission, read blackboard before tasks, /preview/* static routes stay public until replaced by real routes.
+
+## EVENT-MANAGEMENT ROUND (2026-07-31)
+- Phase 1 DONE: Upgraded to Laravel 13.23.0 (Pest 4.7.5, PHPUnit 12.5.30, Tinker 3.0.2, php ^8.4). 43/105 green, Pint clean, PHPStan 0. Committed after user-approved plan (no push).
+- Contract locked: slug URLs, format column (EventFormat), categories CRUD, review flow (draft -> under_review -> published via admin approve/reject; lock editing while under_review), cancel terminal, soft delete/restore, no force-delete route, no admin create, checklist 1-18 web-adapted, IEvent/api = inspiration only.
+- Next: Phase 2 data layer (migrations/enums/models/factories/seeder).
