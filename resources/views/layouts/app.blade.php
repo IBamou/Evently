@@ -37,12 +37,13 @@
 
     // Design roleTabs (design-evently-home.html L1584-1589): active = primary bg/white fg.
     // Clicking a tab switches role AND route (design L1588): guest/user→events, organizer→odash, admin→admin.
-    // The events page renders per ?role= so Guest and User tabs show their OWN shell (nav + avatar).
+    // The events page renders per ?role= so every tab shows that role's OWN shell (nav + avatar).
+    // Organizer/Admin pages are auth-gated now, so those tabs preview the shell on the public events page.
     $roleTabs = [
-        ['label' => 'Guest', 'role' => 'guest', 'href' => '/preview/events'],
-        ['label' => 'User', 'role' => 'user', 'href' => '/preview/events?role=user'],
-        ['label' => 'Organizer', 'role' => 'organizer', 'href' => '/preview/odash'],
-        ['label' => 'Admin', 'role' => 'admin', 'href' => '/preview/admin'],
+        ['label' => 'Guest', 'role' => 'guest', 'href' => route('events.index')],
+        ['label' => 'User', 'role' => 'user', 'href' => route('events.index') . '?role=user'],
+        ['label' => 'Organizer', 'role' => 'organizer', 'href' => route('events.index') . '?role=organizer'],
+        ['label' => 'Admin', 'role' => 'admin', 'href' => route('events.index') . '?role=admin'],
     ];
 
     // Preview path per route key (design route keys L1575-1583, L1591-1597).
@@ -132,14 +133,14 @@
         {{-- ═══════════════════════ HEADER ═══════════════════════ --}}
         <header style="position:sticky;top:0;z-index:40;background:var(--header-bg);backdrop-filter:blur(14px);border-bottom:1px solid var(--border)">
             <div style="max-width:1380px;margin:0 auto;padding:0 26px;height:66px;display:flex;align-items:center;gap:26px">
-                {{-- Logo / wordmark: logged-in users go to the role dashboard, guests stay on the preview --}}
+                {{-- Logo / wordmark: logged-in users go to the role dashboard, guests to the public events page --}}
                 @auth
                     <a href="{{ route('dashboard') }}" style="display:flex;align-items:center;gap:9px;background:none;border:0;cursor:pointer;padding:0;text-decoration:none">
                         <div style="width:34px;height:34px;border-radius:11px;background:linear-gradient(135deg,var(--primary),var(--cyan));display:grid;place-items:center;color:#fff;font-weight:800">E</div>
                         <span style="font-weight:800;font-size:20px;letter-spacing:-.5px;color:var(--primary)">Evently</span>
                     </a>
                 @else
-                    <a href="{{ url('/preview/events' . $roleSuffix) }}" style="display:flex;align-items:center;gap:9px;background:none;border:0;cursor:pointer;padding:0;text-decoration:none">
+                    <a href="{{ route('events.index') . $roleSuffix }}" style="display:flex;align-items:center;gap:9px;background:none;border:0;cursor:pointer;padding:0;text-decoration:none">
                         <div style="width:34px;height:34px;border-radius:11px;background:linear-gradient(135deg,var(--primary),var(--cyan));display:grid;place-items:center;color:#fff;font-weight:800">E</div>
                         <span style="font-weight:800;font-size:20px;letter-spacing:-.5px;color:var(--primary)">Evently</span>
                     </a>
@@ -150,13 +151,17 @@
                     @foreach($nav as $item)
                         @php
                             $isActive = $item['key'] === $activeKey;
-                            // Real routes: login/register for guests, profile for logged-in users.
-                            // Everything else stays on the preview routes (?role= keeps the shell).
-                            $href = match (true) {
-                                $item['key'] === 'login' => route('login'),
-                                $item['key'] === 'register' => route('register'),
-                                (! $isGuest && $item['key'] === 'profile') => route('profile.edit'),
-                                default => ($routePaths[$item['key']] ?? '#') . $roleSuffix,
+                            // Real routes per nav key. Preview-only pages (ubookings/tickets/scan)
+                            // keep their /preview/ routes; everything else uses named routes.
+                            $href = match ($item['key']) {
+                                'login' => route('login'),
+                                'register' => route('register'),
+                                'events' => route('events.index') . $roleSuffix,
+                                'profile' => route('profile.edit'),
+                                'odash', 'admin' => route('dashboard'),
+                                'oevents' => route('organizer.events.index'),
+                                'ubookings', 'booking', 'tickets', 'scan' => ($routePaths[$item['key']] ?? '#') . $roleSuffix,
+                                default => '#',
                             };
                         @endphp
                         <a href="{{ $href }}"
@@ -256,5 +261,21 @@
 </div>
 
 @livewireScripts
+
+{{-- Password show/hide toggle (vanilla JS — works regardless of Alpine instances) --}}
+<script>
+function togglePassword(btn) {
+    var input = btn.parentElement.querySelector('input');
+    var isHidden = input.type === 'password';
+    input.type = isHidden ? 'text' : 'password';
+    var eyeOn  = btn.querySelector('.pw-eye-on');
+    var eyeOff = btn.querySelector('.pw-eye-off');
+    if (eyeOn)  eyeOn.style.display  = isHidden ? 'none' : '';
+    if (eyeOff) eyeOff.style.display = isHidden ? '' : 'none';
+    var label = isHidden ? 'Hide password' : 'Show password';
+    btn.setAttribute('aria-label', label);
+    btn.title = label;
+}
+</script>
 </body>
 </html>

@@ -26,7 +26,11 @@ class RoleRedirectTest extends TestCase
 
         $response = $this->actingAs($organizer)->get('/dashboard');
 
-        $response->assertOk()->assertSee('Welcome back');
+        $response->assertRedirect(route('organizer.dashboard'));
+
+        $this->actingAs($organizer)->get(route('organizer.dashboard'))
+            ->assertOk()
+            ->assertSee('Welcome back');
     }
 
     public function test_admins_are_redirected_to_the_admin_console(): void
@@ -35,6 +39,10 @@ class RoleRedirectTest extends TestCase
 
         $response = $this->actingAs($admin)->get('/dashboard');
 
-        $response->assertOk()->assertSee('Admin console');
+        $response->assertRedirect(route('admin.events.index'));
+
+        $this->actingAs($admin)->get(route('admin.events.index'))
+            ->assertOk()
+            ->assertSee('Admin console');
     }
 }

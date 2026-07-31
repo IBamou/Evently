@@ -9,12 +9,15 @@
 
 <x-app-layout :activeRole="$role" :navRole="$role" :avatarRole="$role" :activeNav="'events'">
 @php
+    // Hero branding stats — no tickets-sales/ratings tables exist yet, so these
+    // stay as the design's values (display-only hero copy, not event data).
     $heroStats = [
         ['value' => '124', 'label' => 'Upcoming events'],
         ['value' => '38K', 'label' => 'Tickets sold'],
         ['value' => '4.8★', 'label' => 'Avg. rating'],
     ];
 
+    // Hero quick-filter chips (design). Static shortcut buttons — kept as-is.
     $heroChips = [
         ['label' => 'Today', 'active' => false],
         ['label' => 'This weekend', 'active' => false],
@@ -24,104 +27,88 @@
         ['label' => 'Near me', 'active' => false],
     ];
 
-    $events = [
-        [
-            'title' => 'Mawazine Nights', 'cat' => 'Music Festival', 'date' => 'Fri 24 Jul',
-            'venue' => 'OLM Souissi', 'city' => 'Rabat', 'price' => '250 MAD', 'spots' => 18, 'fav' => false,
-            'grad' => 'linear-gradient(135deg,#1565D8,#0EA5E9)', 'flag' => 'Hot', 'flagBg' => '#DC2626',
-        ],
-        [
-            'title' => 'AI & Future Summit 2026', 'cat' => 'Conference', 'date' => 'Sat 25 Jul',
-            'venue' => 'Casablanca Technopark', 'city' => 'Casablanca', 'price' => '600 MAD', 'spots' => 7, 'fav' => false,
-            'grad' => 'linear-gradient(135deg,#0B4BAA,#1565D8)', 'flag' => 'New', 'flagBg' => '#1565D8',
-        ],
-        [
-            'title' => 'Atlas Desert Jazz', 'cat' => 'Music', 'date' => 'Sun 26 Jul',
-            'venue' => 'Palais Bahia Gardens', 'city' => 'Marrakech', 'price' => '180 MAD', 'spots' => 3, 'fav' => false,
-            'grad' => 'linear-gradient(135deg,#14B8A6,#0EA5E9)', 'flag' => 'Almost full', 'flagBg' => '#D97706',
-        ],
-        [
-            'title' => 'Creative Makers Expo', 'cat' => 'Exhibition', 'date' => 'Fri 31 Jul',
-            'venue' => 'Tangier Expo Center', 'city' => 'Tangier', 'price' => 'Free', 'spots' => 42, 'fav' => false,
-            'grad' => 'linear-gradient(135deg,#7C3AED,#0EA5E9)', 'flag' => 'Last seats', 'flagBg' => '#16A34A',
-        ],
-        [
-            'title' => 'Tech Startup Pitch Night', 'cat' => 'Networking', 'date' => 'Sat 1 Aug',
-            'venue' => 'Casablanca Twin Center', 'city' => 'Casablanca', 'price' => '120 MAD', 'spots' => 25, 'fav' => false,
-            'grad' => 'linear-gradient(135deg,#D97706,#F59E0B)', 'flag' => '', 'flagBg' => '',
-        ],
-        [
-            'title' => 'Yoga & Wellness Retreat', 'cat' => 'Workshop', 'date' => 'Sun 2 Aug',
-            'venue' => 'Agadir Bay Resort', 'city' => 'Agadir', 'price' => '350 MAD', 'spots' => 15, 'fav' => false,
-            'grad' => 'linear-gradient(135deg,#0EA5E9,#14B8A6)', 'flag' => '', 'flagBg' => '',
-        ],
-        [
-            'title' => 'Casablanca Food Festival', 'cat' => 'Festival', 'date' => 'Fri 7 Aug',
-            'venue' => 'Anfa Park', 'city' => 'Casablanca', 'price' => '90 MAD', 'spots' => 60, 'fav' => false,
-            'grad' => 'linear-gradient(135deg,#DC2626,#F59E0B)', 'flag' => '', 'flagBg' => '',
-        ],
-        [
-            'title' => 'Indie Film Nights', 'cat' => 'Cinema', 'date' => 'Sat 8 Aug',
-            'venue' => 'Rabat Cinémathèque', 'city' => 'Rabat', 'price' => '60 MAD', 'spots' => 31, 'fav' => false,
-            'grad' => 'linear-gradient(135deg,#1565D8,#7C3AED)', 'flag' => '', 'flagBg' => '',
-        ],
-        [
-            'title' => 'Coding Bootcamp Weekend', 'cat' => 'Workshop', 'date' => 'Sun 9 Aug',
-            'venue' => '1337 Khouribga', 'city' => 'Casablanca', 'price' => 'Free', 'spots' => 120, 'fav' => false,
-            'grad' => 'linear-gradient(135deg,#14B8A6,#1565D8)', 'flag' => '', 'flagBg' => '',
-        ],
-        [
-            'title' => 'Moroccan Design Week', 'cat' => 'Exhibition', 'date' => 'Fri 14 Aug',
-            'venue' => 'Marrakech Convention Center', 'city' => 'Marrakech', 'price' => '200 MAD', 'spots' => 28, 'fav' => false,
-            'grad' => 'linear-gradient(135deg,#F59E0B,#DC2626)', 'flag' => '', 'flagBg' => '',
-        ],
-        [
-            'title' => 'Beach Volleyball Cup', 'cat' => 'Sports', 'date' => 'Sat 15 Aug',
-            'venue' => 'Agadir Beach', 'city' => 'Agadir', 'price' => '75 MAD', 'spots' => 8, 'fav' => false,
-            'grad' => 'linear-gradient(135deg,#0B4BAA,#0EA5E9)', 'flag' => '', 'flagBg' => '',
-        ],
-        [
-            'title' => 'SaaS Founders Meetup', 'cat' => 'Networking', 'date' => 'Sun 16 Aug',
-            'venue' => 'Tangier Cowork', 'city' => 'Tangier', 'price' => 'Free', 'spots' => 19, 'fav' => false,
-            'grad' => 'linear-gradient(135deg,#7C3AED,#1565D8)', 'flag' => '', 'flagBg' => '',
-        ],
-    ];
+    // Sidebar filter groups, wired to the controller's real params
+    // (category slug / format / time of day). Options link back to the
+    // listing, keeping the current search/city/sort/role query intact.
+    $activeCategory = $filters['category'] ?? '';
+    $activeFormat = $filters['format'] ?? '';
+    $activeTime = $filters['time'] ?? '';
 
-    $featuredEvents = array_slice($events, 0, 4);
-    $visibleEvents = array_slice($events, 0, 6);
+    $mkFilterUrl = function (array $overrides) use ($role, $filters): string {
+        $query = $filters;
+        unset($query['per_page']);
+        if ($role !== 'guest') {
+            $query['role'] = $role;
+        }
+
+        return route('events.index', array_filter(array_merge($query, $overrides), fn ($v) => $v !== null && $v !== ''));
+    };
+
+    $categoryOptions = [['label' => 'All categories', 'count' => $events->total(), 'checked' => $activeCategory === '', 'url' => $mkFilterUrl(['category' => ''])]];
+    foreach ($categories as $category) {
+        $categoryOptions[] = [
+            'label' => $category->name,
+            'count' => $category->published_count ?? 0,
+            'checked' => $activeCategory === $category->slug,
+            'url' => $mkFilterUrl(['category' => $category->slug]),
+        ];
+    }
 
     $filterGroups = [
         [
             'label' => 'Categories',
-            'options' => [
-                ['label' => 'All categories', 'count' => 12, 'checked' => true],
-                ['label' => 'Music', 'count' => 3, 'checked' => false],
-                ['label' => 'Business', 'count' => 1, 'checked' => false],
-                ['label' => 'Tech', 'count' => 2, 'checked' => false],
-                ['label' => 'Art', 'count' => 3, 'checked' => false],
-                ['label' => 'Sports', 'count' => 1, 'checked' => false],
-                ['label' => 'Food & Drinks', 'count' => 1, 'checked' => false],
-            ],
+            'options' => $categoryOptions,
         ],
         [
             'label' => 'Format',
             'options' => [
-                ['label' => 'Any', 'count' => '', 'checked' => true],
-                ['label' => 'In person', 'count' => '', 'checked' => false],
-                ['label' => 'Online', 'count' => '', 'checked' => false],
-                ['label' => 'Hybrid', 'count' => '', 'checked' => false],
+                ['label' => 'Any', 'count' => '', 'checked' => $activeFormat === '', 'url' => $mkFilterUrl(['format' => ''])],
+                ['label' => 'In person', 'count' => '', 'checked' => $activeFormat === 'in_person', 'url' => $mkFilterUrl(['format' => 'in_person'])],
+                ['label' => 'Online', 'count' => '', 'checked' => $activeFormat === 'online', 'url' => $mkFilterUrl(['format' => 'online'])],
             ],
         ],
         [
             'label' => 'Time of day',
             'options' => [
-                ['label' => 'Any time', 'count' => '', 'checked' => true],
-                ['label' => 'Morning', 'count' => '', 'checked' => false],
-                ['label' => 'Afternoon', 'count' => '', 'checked' => false],
-                ['label' => 'Evening', 'count' => '', 'checked' => false],
+                ['label' => 'Any time', 'count' => '', 'checked' => $activeTime === '', 'url' => $mkFilterUrl(['time' => ''])],
+                ['label' => 'Morning', 'count' => '', 'checked' => $activeTime === 'morning', 'url' => $mkFilterUrl(['time' => 'morning'])],
+                ['label' => 'Afternoon', 'count' => '', 'checked' => $activeTime === 'afternoon', 'url' => $mkFilterUrl(['time' => 'afternoon'])],
+                ['label' => 'Evening', 'count' => '', 'checked' => $activeTime === 'evening', 'url' => $mkFilterUrl(['time' => 'evening'])],
             ],
         ],
     ];
+
+    // Category slug → cover gradient (design card gradients). Unknown categories
+    // fall back to the brand primary→cyan gradient.
+    $categoryGradients = [
+        'music' => 'linear-gradient(135deg,#1565D8,#0EA5E9)',
+        'business' => 'linear-gradient(135deg,#D97706,#F59E0B)',
+        'tech' => 'linear-gradient(135deg,#7C3AED,#0EA5E9)',
+        'art' => 'linear-gradient(135deg,#14B8A6,#0EA5E9)',
+        'sports' => 'linear-gradient(135deg,#0EA5E9,#14B8A6)',
+        'food-drinks' => 'linear-gradient(135deg,#DC2626,#F59E0B)',
+    ];
+
+    // Cover background: real banner image when uploaded, otherwise the category gradient.
+    $coverBg = function ($event) use ($categoryGradients) {
+        if ($event->banner_url) {
+            return "url('" . e($event->banner_url) . "') center/cover";
+        }
+        return $categoryGradients[$event->category?->slug] ?? 'linear-gradient(135deg,var(--primary),var(--cyan))';
+    };
+
+    // Date line "Fri 24 Jul" — design format.
+    $cardDate = fn ($event) => $event->starts_at?->format('D j M') ?: '';
+
+    // Event cards keep the ?role= shell on the shared public pages.
+    $roleSuffix = $role !== 'guest' ? '?role=' . $role : '';
+    $detailUrl = fn ($event) => route('events.show', $event->slug) . $roleSuffix;
+
+    // Design sort labels → real controller sort keys. There is no price column
+    // yet, so the price options map to title ordering — labeled as Title sorts.
+    // Initial load (no ?sort=) shows "Recommended"; once the user picks a sort it
+    // stays reflected after the GET submit.
+    $sortSelected = request()->has('sort') ? ($filters['sort'] ?? '') : 'recommended';
 @endphp
 
     {{-- ===================== HERO ===================== --}}
@@ -143,7 +130,7 @@
                 <div style="animation:up .7s ease both">
                     <div style="display:inline-flex;align-items:center;gap:8px;padding:7px 13px;border-radius:99px;background:rgba(255,255,255,.75);border:1px solid rgba(21,101,216,.16);font-size:12px;font-weight:700;color:var(--primary-dark);margin-bottom:20px">
                         <span style="width:7px;height:7px;border-radius:50%;background:var(--ok);animation:ping 2.4s ease-out infinite"></span>
-                        12 events live in Casablanca, Rabat &amp; beyond
+                        {{ $events->total() }} events live in Casablanca, Rabat &amp; beyond
                     </div>
                     <h1 style="margin:0 0 16px;font-size:52px;line-height:1.04;letter-spacing:-1.8px;font-weight:800;text-wrap:balance">Find events that <span style="background:linear-gradient(100deg,var(--primary),var(--cyan));-webkit-background-clip:text;background-clip:text;color:transparent">inspire you</span></h1>
                     <p style="margin:0 0 26px;font-size:16.5px;line-height:1.6;color:var(--muted);max-width:44ch;text-wrap:pretty">Concerts, festivals, conferences and workshops across Morocco. Book in seconds, get a QR ticket instantly.</p>
@@ -158,11 +145,12 @@
                 </div>
 
                 <div style="animation:up .7s .1s ease both">
-                    <div style="background:var(--surface);border:1px solid var(--border);border-radius:18px;box-shadow:var(--shadow);padding:14px;display:flex;gap:10px;align-items:center">
+                    <form method="GET" action="{{ route('events.index') }}" style="background:var(--surface);border:1px solid var(--border);border-radius:18px;box-shadow:var(--shadow);padding:14px;display:flex;gap:10px;align-items:center;margin:0">
+                        @if ($role !== 'guest')<input type="hidden" name="role" value="{{ $role }}">@endif
                         <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2" stroke-linecap="round" style="margin-left:6px;flex:0 0 auto"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg>
-                        <input type="text" class="needs-focus" placeholder="Search events, categories or venues…" aria-label="Search events" style="flex:1;min-width:0;border:0;background:none;font-size:15px;padding:8px 0;outline:none">
-                        <button type="button" style="border:0;cursor:pointer;background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:#fff;font-weight:700;font-size:14px;padding:12px 22px;border-radius:12px;min-height:44px">Search</button>
-                    </div>
+                        <input type="text" name="search" value="{{ $filters['search'] ?? '' }}" class="needs-focus" placeholder="Search events, categories or venues…" aria-label="Search events" style="flex:1;min-width:0;border:0;background:none;font-size:15px;padding:8px 0;outline:none">
+                        <button type="submit" style="border:0;cursor:pointer;background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:#fff;font-weight:700;font-size:14px;padding:12px 22px;border-radius:12px;min-height:44px">Search</button>
+                    </form>
                     <div style="display:flex;gap:9px;flex-wrap:wrap;margin-top:14px">
                         @foreach ($heroChips as $chip)
                             <button type="button" class="needs-focus" style="display:inline-flex;align-items:center;gap:7px;min-height:40px;padding:9px 15px;border-radius:11px;cursor:pointer;font-size:13px;font-weight:700;border:1px solid {{ $chip['active'] ? 'var(--primary)' : 'var(--border)' }};background:{{ $chip['active'] ? 'var(--primary)' : 'var(--surface2)' }};color:{{ $chip['active'] ? '#fff' : 'var(--text)' }};box-shadow:var(--shadow)">{{ $chip['label'] }}</button>
@@ -192,25 +180,24 @@
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="1.9" stroke-linejoin="round"><path d="m12 3 2.9 5.9 6.6.9-4.8 4.6 1.2 6.5L12 17.8 6.1 20.9l1.2-6.5L2.5 9.8l6.6-.9z"></path></svg>
                 <h2 style="margin:0;font-size:17px;font-weight:800;letter-spacing:-.3px">Featured events</h2>
                 <div style="flex:1"></div>
-                <button type="button" style="border:0;background:none;cursor:pointer;font-size:13px;font-weight:700;color:var(--primary)">View all</button>
+                <a href="{{ route('events.index') . $roleSuffix }}" style="border:0;background:none;cursor:pointer;font-size:13px;font-weight:700;color:var(--primary);text-decoration:none">View all</a>
             </div>
 
             <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px">
-                @foreach ($featuredEvents as $event)
-                    <article class="ev-card" onclick="location.href='{{ url('/preview/events/atlantis-live' . ($role !== 'guest' ? '?role=' . $role : '')) }}'" style="border:1px solid var(--border);border-radius:16px;overflow:hidden;background:var(--surface);cursor:pointer">
-                        <div style="position:relative;height:150px;background:{{ $event['grad'] }}">
-                            <span style="position:absolute;top:11px;left:11px;padding:5px 10px;border-radius:8px;background:{{ $event['flagBg'] }};color:#fff;font-size:10.5px;font-weight:800;letter-spacing:.5px;text-transform:uppercase">{{ $event['flag'] }}</span>
-                            <span style="position:absolute;bottom:11px;left:11px;padding:5px 10px;border-radius:8px;background:rgba(255,255,255,.92);color:#0B2545;font-size:10.5px;font-weight:800;letter-spacing:.5px;text-transform:uppercase">{{ $event['cat'] }}</span>
-                            <button type="button" onclick="event.stopPropagation()" aria-label="Save event" aria-pressed="{{ $event['fav'] ? 'true' : 'false' }}" style="position:absolute;top:9px;right:9px;width:34px;height:34px;border-radius:50%;border:0;cursor:pointer;background:rgba(255,255,255,.9);display:grid;place-items:center">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="{{ $event['fav'] ? '#DC2626' : 'none' }}" stroke="#0B2545" stroke-width="1.8" stroke-linejoin="round"><path d="M12 20s-7-4.4-7-9.4A4.1 4.1 0 0 1 12 8a4.1 4.1 0 0 1 7 2.6c0 5-7 9.4-7 9.4z"></path></svg>
+                @foreach ($featured as $event)
+                    <article class="ev-card" onclick="location.href='{{ $detailUrl($event) }}'" style="border:1px solid var(--border);border-radius:16px;overflow:hidden;background:var(--surface);cursor:pointer">
+                        <div style="position:relative;height:150px;background:{{ $coverBg($event) }}">
+                            <span style="position:absolute;bottom:11px;left:11px;padding:5px 10px;border-radius:8px;background:rgba(255,255,255,.92);color:#0B2545;font-size:10.5px;font-weight:800;letter-spacing:.5px;text-transform:uppercase">{{ $event->category?->name ?? 'Event' }}</span>
+                            <button type="button" onclick="event.stopPropagation()" aria-label="Save event" aria-pressed="false" style="position:absolute;top:9px;right:9px;width:34px;height:34px;border-radius:50%;border:0;cursor:pointer;background:rgba(255,255,255,.9);display:grid;place-items:center">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0B2545" stroke-width="1.8" stroke-linejoin="round"><path d="M12 20s-7-4.4-7-9.4A4.1 4.1 0 0 1 12 8a4.1 4.1 0 0 1 7 2.6c0 5-7 9.4-7 9.4z"></path></svg>
                             </button>
                         </div>
                         <div style="padding:14px">
-                            <h3 style="margin:0 0 9px;font-size:15px;font-weight:700;letter-spacing:-.2px;line-height:1.3">{{ $event['title'] }}</h3>
+                            <h3 style="margin:0 0 9px;font-size:15px;font-weight:700;letter-spacing:-.2px;line-height:1.3">{{ $event->title }}</h3>
                             <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);font-weight:600;margin-bottom:10px;flex-wrap:wrap">
-                                <span>{{ $event['date'] }}</span><span style="opacity:.5">·</span><span>{{ $event['city'] }}</span>
+                                <span>{{ $cardDate($event) }}</span><span style="opacity:.5">·</span><span>{{ $event->city }}</span>
                             </div>
-                            <div style="font-size:13px;font-weight:800;color:var(--primary)">{{ $event['price'] }}</div>
+                            <div style="font-size:13px;font-weight:800;color:var(--primary)">{{ $event->format?->label() ?? 'In person' }}</div>
                         </div>
                     </article>
                 @endforeach
@@ -225,7 +212,7 @@
                 <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M4 6h16M7 12h10M10 18h4"></path></svg>
                 <span style="font-weight:800;font-size:14px">Filters</span>
                 <div style="flex:1"></div>
-                <button type="button" style="border:0;background:none;cursor:pointer;font-size:12px;font-weight:700;color:var(--primary)">Clear all</button>
+                <a href="{{ route('events.index') . $roleSuffix }}" style="border:0;background:none;cursor:pointer;font-size:12px;font-weight:700;color:var(--primary);text-decoration:none">Clear all</a>
             </div>
 
             @foreach ($filterGroups as $group)
@@ -233,13 +220,13 @@
                     <div style="font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);margin-bottom:11px">{{ $group['label'] }}</div>
                     <div style="display:flex;flex-direction:column;gap:3px">
                         @foreach ($group['options'] as $option)
-                            <button type="button" class="needs-focus" role="checkbox" aria-checked="{{ $option['checked'] ? 'true' : 'false' }}" style="display:flex;align-items:center;gap:10px;padding:8px 8px;min-height:38px;border:0;border-radius:9px;cursor:pointer;background:{{ $option['checked'] ? 'var(--chip)' : 'transparent' }};text-align:left;font-size:13px;font-weight:{{ $option['checked'] ? '800' : '600' }};color:{{ $option['checked'] ? 'var(--primary)' : 'var(--text)' }}">
+                            <a href="{{ $option['url'] }}" class="needs-focus" role="checkbox" aria-checked="{{ $option['checked'] ? 'true' : 'false' }}" style="display:flex;align-items:center;gap:10px;padding:8px 8px;min-height:38px;border:0;border-radius:9px;cursor:pointer;background:{{ $option['checked'] ? 'var(--chip)' : 'transparent' }};text-align:left;font-size:13px;font-weight:{{ $option['checked'] ? '800' : '600' }};color:{{ $option['checked'] ? 'var(--primary)' : 'var(--text)' }};text-decoration:none">
                                 <span style="width:16px;height:16px;flex:0 0 auto;border-radius:5px;border:1.6px solid {{ $option['checked'] ? 'var(--primary)' : 'var(--border)' }};background:{{ $option['checked'] ? 'var(--primary)' : 'transparent' }};display:grid;place-items:center">
                                     <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round" style="opacity:{{ $option['checked'] ? 1 : 0 }}"><path d="M20 6 9 17l-5-5"></path></svg>
                                 </span>
                                 <span style="flex:1">{{ $option['label'] }}</span>
                                 <span style="font-size:11px;color:var(--muted);font-weight:600">{{ $option['count'] }}</span>
-                            </button>
+                            </a>
                         @endforeach
                     </div>
                 </div>
@@ -253,16 +240,25 @@
         </aside>
 
         <div>
-            <div style="display:flex;align-items:center;gap:14px;margin-bottom:18px;flex-wrap:wrap">
-                <h2 style="margin:0;font-size:22px;font-weight:800;letter-spacing:-.6px">{{ count($events) }} events found</h2>
+            <form method="GET" action="{{ route('events.index') }}" style="display:flex;align-items:center;gap:14px;margin-bottom:18px;flex-wrap:wrap">
+                @if ($role !== 'guest')<input type="hidden" name="role" value="{{ $role }}">@endif
+                @if (filled($filters['search'] ?? null))<input type="hidden" name="search" value="{{ $filters['search'] }}">@endif
+                <h2 style="margin:0;font-size:22px;font-weight:800;letter-spacing:-.6px">{{ $events->total() }} events found</h2>
                 <div style="flex:1"></div>
+                <span style="font-size:13px;color:var(--muted);font-weight:600">City</span>
+                <select name="city" aria-label="Filter by city" class="needs-focus" onchange="this.form.submit()" style="min-height:40px;padding:9px 12px;border:1px solid var(--border);background:var(--surface);border-radius:11px;font-size:13px;font-weight:600">
+                    <option value="" {{ ! filled($filters['city'] ?? null) ? 'selected' : '' }}>All cities</option>
+                    @foreach ($cities as $city)
+                        <option value="{{ $city }}" {{ ($filters['city'] ?? null) === $city ? 'selected' : '' }}>{{ $city }}</option>
+                    @endforeach
+                </select>
                 <span style="font-size:13px;color:var(--muted);font-weight:600">Sort by</span>
-                <select aria-label="Sort events" class="needs-focus" style="min-height:40px;padding:9px 12px;border:1px solid var(--border);background:var(--surface);border-radius:11px;font-size:13px;font-weight:600">
-                    <option value="Recommended" selected>Recommended</option>
-                    <option value="Date (soonest)">Date (soonest)</option>
-                    <option value="Date (latest)">Date (latest)</option>
-                    <option value="Price (low → high)">Price (low → high)</option>
-                    <option value="Price (high → low)">Price (high → low)</option>
+                <select name="sort" aria-label="Sort events" class="needs-focus" onchange="this.form.submit()" style="min-height:40px;padding:9px 12px;border:1px solid var(--border);background:var(--surface);border-radius:11px;font-size:13px;font-weight:600">
+                    <option value="" {{ $sortSelected === '' || $sortSelected === 'recommended' ? 'selected' : '' }}>Recommended</option>
+                    <option value="starts_at" {{ $sortSelected === 'starts_at' ? 'selected' : '' }}>Date (soonest)</option>
+                    <option value="-starts_at" {{ $sortSelected === '-starts_at' ? 'selected' : '' }}>Date (latest)</option>
+                    <option value="title" {{ $sortSelected === 'title' ? 'selected' : '' }}>Title (A → Z)</option>
+                    <option value="-title" {{ $sortSelected === '-title' ? 'selected' : '' }}>Title (Z → A)</option>
                 </select>
                 <div style="display:flex;gap:4px;padding:4px;border:1px solid var(--border);background:var(--surface);border-radius:11px">
                     <button type="button" aria-label="Grid view" class="needs-focus" style="width:36px;height:36px;display:grid;place-items:center;border:0;border-radius:8px;cursor:pointer;background:var(--primary);color:#fff">
@@ -272,38 +268,43 @@
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"></path></svg>
                     </button>
                 </div>
-            </div>
+            </form>
 
-            <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px">
-                @foreach ($visibleEvents as $event)
-                    @php $detailUrl = url('/preview/events/atlantis-live' . ($role !== 'guest' ? '?role=' . $role : '')); @endphp
-                    <article class="ev-card" onclick="location.href='{{ $detailUrl }}'" style="border:1px solid var(--border);border-radius:16px;overflow:hidden;background:var(--surface);cursor:pointer">
-                        <div style="position:relative;height:160px;background:{{ $event['grad'] }}">
-                            <span style="position:absolute;top:11px;left:11px;padding:5px 10px;border-radius:8px;background:rgba(255,255,255,.93);color:#0B2545;font-size:10.5px;font-weight:800;letter-spacing:.5px;text-transform:uppercase">{{ $event['cat'] }}</span>
-                            <button type="button" onclick="event.stopPropagation()" aria-label="Save event" aria-pressed="{{ $event['fav'] ? 'true' : 'false' }}" style="position:absolute;top:9px;right:9px;width:34px;height:34px;border-radius:50%;border:0;cursor:pointer;background:rgba(255,255,255,.9);display:grid;place-items:center">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="{{ $event['fav'] ? '#DC2626' : 'none' }}" stroke="#0B2545" stroke-width="1.8" stroke-linejoin="round"><path d="M12 20s-7-4.4-7-9.4A4.1 4.1 0 0 1 12 8a4.1 4.1 0 0 1 7 2.6c0 5-7 9.4-7 9.4z"></path></svg>
-                            </button>
-                        </div>
-                        <div style="padding:16px;flex:1;display:flex;flex-direction:column;gap:10px">
-                            <h3 style="margin:0;font-size:16px;font-weight:700;letter-spacing:-.2px">{{ $event['title'] }}</h3>
-                            <div style="display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--muted);font-weight:600;flex-wrap:wrap">
-                                <span>{{ $event['date'] }}</span><span style="opacity:.5">·</span><span>{{ $event['venue'] }}</span>
+            @if ($events->isEmpty())
+                <div style="border:1.5px dashed var(--border);border-radius:18px;padding:60px 26px;text-align:center;background:var(--surface)">
+                    <div style="font-size:17px;font-weight:800;color:var(--text);margin-bottom:6px">No events found</div>
+                    <div style="font-size:14px;color:var(--muted);font-weight:600">Try a different search or browse all events.</div>
+                    <a href="{{ route('events.index') }}" style="display:inline-block;margin-top:18px;border:0;cursor:pointer;background:var(--primary);color:#fff;font-weight:700;font-size:13.5px;padding:11px 20px;border-radius:11px;text-decoration:none">Browse all events</a>
+                </div>
+            @else
+                <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px">
+                    @foreach ($events as $event)
+                        <article class="ev-card" onclick="location.href='{{ $detailUrl($event) }}'" style="border:1px solid var(--border);border-radius:16px;overflow:hidden;background:var(--surface);cursor:pointer">
+                            <div style="position:relative;height:160px;background:{{ $coverBg($event) }}">
+                                <span style="position:absolute;top:11px;left:11px;padding:5px 10px;border-radius:8px;background:rgba(255,255,255,.93);color:#0B2545;font-size:10.5px;font-weight:800;letter-spacing:.5px;text-transform:uppercase">{{ $event->category?->name ?? 'Event' }}</span>
+                                <button type="button" onclick="event.stopPropagation()" aria-label="Save event" aria-pressed="false" style="position:absolute;top:9px;right:9px;width:34px;height:34px;border-radius:50%;border:0;cursor:pointer;background:rgba(255,255,255,.9);display:grid;place-items:center">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0B2545" stroke-width="1.8" stroke-linejoin="round"><path d="M12 20s-7-4.4-7-9.4A4.1 4.1 0 0 1 12 8a4.1 4.1 0 0 1 7 2.6c0 5-7 9.4-7 9.4z"></path></svg>
+                                </button>
                             </div>
-                            <div style="display:flex;align-items:center;gap:10px;margin-top:auto">
-                                <span style="font-size:13.5px;font-weight:800;color:var(--primary)">{{ $event['price'] }}</span>
-                                <div style="flex:1"></div>
-                                <span style="border:0;cursor:pointer;background:var(--primary);color:#fff;font-weight:700;font-size:13px;padding:10px 16px;border-radius:10px;min-height:40px">View details</span>
+                            <div style="padding:16px;flex:1;display:flex;flex-direction:column;gap:10px">
+                                <h3 style="margin:0;font-size:16px;font-weight:700;letter-spacing:-.2px">{{ $event->title }}</h3>
+                                <div style="display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--muted);font-weight:600;flex-wrap:wrap">
+                                    <span>{{ $cardDate($event) }}</span><span style="opacity:.5">·</span><span>{{ $event->location }}</span>
+                                </div>
+                                <div style="display:flex;align-items:center;gap:10px;margin-top:auto">
+                                    <span style="font-size:13.5px;font-weight:800;color:var(--primary)">{{ $event->format?->label() ?? 'In person' }}</span>
+                                    <div style="flex:1"></div>
+                                    <a href="{{ $detailUrl($event) }}" style="border:0;cursor:pointer;background:var(--primary);color:#fff;font-weight:700;font-size:13px;padding:10px 16px;border-radius:10px;min-height:40px;text-decoration:none;display:inline-flex;align-items:center">View details</a>
+                                </div>
                             </div>
-                        </div>
-                    </article>
-                @endforeach
-            </div>
+                        </article>
+                    @endforeach
+                </div>
 
-            <div style="display:flex;align-items:center;justify-content:center;gap:8px;margin-top:32px">
-                <button type="button" aria-current="page" style="min-width:40px;min-height:40px;padding:0 12px;border:1px solid var(--primary);background:var(--primary);color:#fff;border-radius:10px;cursor:pointer;font-size:13px;font-weight:700">1</button>
-                <button type="button" style="min-width:40px;min-height:40px;padding:0 12px;border:1px solid var(--border);background:var(--surface);color:var(--text);border-radius:10px;cursor:pointer;font-size:13px;font-weight:700">2</button>
-                <button type="button" style="min-width:40px;min-height:40px;padding:0 12px;border:1px solid var(--border);background:var(--surface);color:var(--text);border-radius:10px;cursor:pointer;font-size:13px;font-weight:700">3</button>
-            </div>
+                <div style="margin-top:32px">
+                    {{ $events->links() }}
+                </div>
+            @endif
         </div>
     </section>
 

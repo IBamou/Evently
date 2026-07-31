@@ -2,9 +2,17 @@
     // Design dashTitle (L1593): admin role → "Platform dashboard", otherwise "Welcome back, <first name>".
     $dashRole = request('role', 'organizer');
     $dashRole = in_array($dashRole, ['organizer', 'admin'], true) ? $dashRole : 'organizer';
-    $dashTitle = $dashRole === 'admin' ? 'Platform dashboard' : 'Welcome back, Salma';
+    $dashFirstName = ucfirst(str_word_count(Auth::user()->name ?? '') > 0 ? strtok((string) Auth::user()->name, ' ') : 'there');
+    $dashTitle = $dashRole === 'admin' ? 'Platform dashboard' : 'Welcome back, ' . $dashFirstName;
 
-    // ── Static demo data, ported 1:1 from design-evently-home.html (organizer role, range "30 days") ──
+    // Live counts (real data, passed from the organizer dashboard controller).
+    $stats ??= [];
+    $liveCount = $stats['published'] ?? 0;
+    $pendingCount = $stats['underReview'] ?? 0;
+
+    // ── Design sample data, ported 1:1 from design-evently-home.html (organizer role, range "30 days").
+    // Revenue / tickets sold / check-in rate have no data source yet (no orders or tickets tables),
+    // so those values stay as the design's sample numbers. ──
     $kpis = [
         ['label' => 'Revenue', 'value' => '8,673,560 MAD', 'delta' => '+12.4% vs last period', 'deltaFg' => 'var(--ok)',
          'iconBg' => 'var(--chip)', 'iconFg' => 'var(--primary)',
@@ -12,7 +20,7 @@
         ['label' => 'Tickets sold', 'value' => '51,278', 'delta' => '+8.1% vs last period', 'deltaFg' => 'var(--ok)',
          'iconBg' => 'rgba(20,184,166,.12)', 'iconFg' => 'var(--teal)',
          'icon' => 'M3 9V7a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v2a2 2 0 0 0 0 6v2a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-6z'],
-        ['label' => 'Live events', 'value' => '6', 'delta' => '2 awaiting approval', 'deltaFg' => 'var(--warn)',
+        ['label' => 'Live events', 'value' => number_format($liveCount), 'delta' => $pendingCount . ' awaiting approval', 'deltaFg' => $pendingCount > 0 ? 'var(--warn)' : 'var(--muted)',
          'iconBg' => 'rgba(14,165,233,.12)', 'iconFg' => 'var(--cyan)',
          'icon' => 'M8 2v4M16 2v4M3 10h18M5 6h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z'],
         ['label' => 'Check-in rate', 'value' => '87%', 'delta' => '214 scanned tonight', 'deltaFg' => 'var(--muted)',
@@ -72,7 +80,7 @@
                     <button type="button" style="border:0;cursor:pointer;padding:9px 14px;min-height:40px;border-radius:9px;font-size:12.5px;font-weight:700;background:{{ $range === '30 days' ? 'var(--primary)' : 'transparent' }};color:{{ $range === '30 days' ? '#fff' : 'var(--muted)' }}">{{ $range }}</button>
                 @endforeach
             </div>
-            <a href="/preview/create" style="border:0;cursor:pointer;background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:#fff;font-weight:700;font-size:14px;padding:13px 20px;border-radius:12px;min-height:46px;text-decoration:none;display:inline-flex;align-items:center">+ New event</a>
+            <a href="{{ route('organizer.events.create') }}" style="border:0;cursor:pointer;background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:#fff;font-weight:700;font-size:14px;padding:13px 20px;border-radius:12px;min-height:46px;text-decoration:none;display:inline-flex;align-items:center">+ New event</a>
         </div>
 
         {{-- KPI cards --}}
