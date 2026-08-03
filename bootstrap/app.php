@@ -16,6 +16,9 @@ return Application::configure(basePath: dirname(__DIR__))
             'role' => EnsureRole::class,
         ]);
     })
+    ->withSchedule(function ($schedule) {
+        $schedule->command('bookings:expire')->everyFiveMinutes();
+    })
     ->withExceptions(function (Exceptions $exceptions) {
         //
     })->create();

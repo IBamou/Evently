@@ -1,6 +1,6 @@
 @php
-    // City suggestions — no cities table exists, so the design's suggestion list is kept.
-    $cities = ['Casablanca', 'Rabat', 'Marrakech', 'Tanger', 'Chefchaouen', 'Salé'];
+    // City suggestions â€” no cities table exists, so the design's suggestion list is kept.
+    $cities = ['Casablanca', 'Rabat', 'Marrakech', 'Tanger', 'Chefchaouen', 'SalÃ©'];
 
     $statusBadge = [
         'draft' => ['rgba(91,119,148,.14)', 'var(--muted)'],
@@ -11,13 +11,15 @@
     [$badgeBg, $badgeFg] = $statusBadge[$event->status->value] ?? ['var(--chip)', 'var(--muted)'];
 @endphp
 
-<x-app-layout :activeRole="'organizer'" :navRole="'organizer'" :avatarRole="'organizer'" :activeNav="'oevents'">
+<x-app-layout :activeNav="'oevents'">
 
     <div style="max-width:960px;margin:0 auto;padding:30px 26px 60px">
         <a href="{{ route('organizer.events.index') }}" style="border:0;background:none;cursor:pointer;font-size:13px;font-weight:700;color:var(--muted);padding:8px 0;margin-bottom:10px;text-decoration:none;display:inline-block">&larr; Back to my events</a>
         <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:6px">
             <h1 style="margin:0;font-size:28px;font-weight:800;letter-spacing:-.9px">Edit event</h1>
             <span style="padding:5px 10px;border-radius:8px;font-size:11px;font-weight:800;text-transform:uppercase;background:{{ $badgeBg }};color:{{ $badgeFg }}">{{ $event->status->label() }}</span>
+            <div style="flex:1"></div>
+            <a href="{{ route('organizer.ticket-types.index', $event) }}" style="border:1px solid var(--border);background:var(--surface);cursor:pointer;font-size:12.5px;font-weight:700;padding:10px 15px;border-radius:10px;min-height:40px;text-decoration:none;color:var(--text);display:inline-flex;align-items:center">Ticket types</a>
         </div>
         <p style="margin:0 0 24px;color:var(--muted);font-size:14.5px">{{ $event->title }}</p>
 

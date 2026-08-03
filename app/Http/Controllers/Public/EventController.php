@@ -6,6 +6,7 @@ use App\Enums\EventStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Models\Event;
+use App\Models\Ticket;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
@@ -63,6 +64,11 @@ class EventController extends Controller
             $query->where('starts_at', '<=', $request->input('starts_to'));
         }
 
+        // Max price filter: match events that have at least one ticket type at or below the price
+        if ($request->filled('max_price')) {
+            $query->whereHas('ticketTypes', fn ($q) => $q->where('price', '<=', (float) $request->input('max_price')));
+        }
+
         // Whitelisted sort (default starts_at asc)
         $sortOptions = [
             'starts_at' => ['starts_at', 'asc'],
@@ -95,9 +101,12 @@ class EventController extends Controller
             ->get();
 
         // Categories with published-event counts (for the sidebar filter)
+        // Hide categories that have zero published events (faker junk)
         $categories = Category::withCount(['events as published_count' => function ($q): void {
             $q->where('status', EventStatus::Published)->whereNull('deleted_at');
-        }])->orderBy('name')->get();
+        }])->orderBy('name')->get()
+            ->filter(fn ($cat) => $cat->published_count > 0)
+            ->values();
 
         // Distinct city values of published events
         $cities = Event::where('status', EventStatus::Published)
@@ -107,6 +116,21 @@ class EventController extends Controller
             ->sort()
             ->values();
 
+        // Real hero stats — computed from database
+        $upcomingCount = Event::where('status', EventStatus::Published)
+            ->whereNull('deleted_at')
+            ->where('starts_at', '>', now())
+            ->count();
+
+        $ticketsSold = Ticket::whereHas('event', function ($q): void {
+            $q->where('status', EventStatus::Published)->whereNull('deleted_at');
+        })->count();
+
+        $heroStats = [
+            ['value' => number_format($upcomingCount), 'label' => 'Upcoming events'],
+            ['value' => number_format($ticketsSold), 'label' => 'Tickets sold'],
+        ];
+
         $filters = [
             'search' => $request->input('search'),
             'city' => $request->input('city'),
@@ -115,9 +139,12 @@ class EventController extends Controller
             'time' => $request->input('time'),
             'sort' => $request->input('sort', 'starts_at'),
             'per_page' => $perPage,
+            'max_price' => $request->input('max_price'),
+            'starts_from' => $request->input('starts_from'),
+            'starts_to' => $request->input('starts_to'),
         ];
 
-        return view('home', compact('events', 'featured', 'categories', 'filters', 'cities'));
+        return view('home', compact('events', 'featured', 'categories', 'filters', 'cities', 'heroStats'));
     }
 
     /**
@@ -129,6 +156,24 @@ class EventController extends Controller
 
         $event->load(['organizer:id,name', 'category:id,name,slug']);
 
+        // Load active ticket types with computed availability
+        $ticketTypes = $event->ticketTypes()
+            ->where('is_active', true)
+            ->get()
+            ->map(fn ($tt) => [
+                'id' => $tt->id,
+                'name' => $tt->name,
+                'description' => $tt->description,
+                'price' => $tt->price,
+                'currency' => $tt->currency,
+                'min_per_booking' => $tt->min_per_booking,
+                'max_per_booking' => $tt->max_per_booking,
+                'available_quantity' => $tt->availableQuantity(),
+                'is_sales_open' => $tt->isSalesOpen(),
+                'sales_start_at' => $tt->sales_start_at,
+                'sales_end_at' => $tt->sales_end_at,
+            ]);
+
         // "You may also like": other upcoming published events in the same category.
         $related = Event::query()
             ->published()
@@ -139,6 +184,11 @@ class EventController extends Controller
             ->limit(3)
             ->get();
 
-        return view('events.show', ['event' => $event, 'related' => $related]);
+        // Sales progress: issued tickets count + total capacity across ticket types.
+        // ticket_types.quantity IS the capacity (no separate capacity column).
+        $sold = $event->tickets()->count();
+        $capacity = (int) $event->ticketTypes()->sum('quantity');
+
+        return view('events.show', compact('event', 'related', 'ticketTypes', 'sold', 'capacity'));
     }
 }

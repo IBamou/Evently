@@ -2,10 +2,10 @@
      Accepts $pageTitle prop (optional) for role reuse; falls back to a role-based title. --}}
 @props(['pageTitle' => null])
 
-<x-app-layout :activeRole="'user'" :navRole="'user'" :avatarRole="'user'" :activeNav="'profile'">
+<x-app-layout :activeNav="'profile'">
 @php
     // Real authenticated user (passed by ProfileController). A static demo
-    // fallback keeps the /preview/profile route working without a $user.
+    // fallback keeps the page renderable when $user is missing (bare renders).
     $profileUser = $user ?? null;
     $userName = $profileUser?->name ?? 'Yassine Benali';
     $userEmail = $profileUser?->email ?? 'yassine@example.com';
@@ -132,7 +132,7 @@
         <div style="background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:24px">
             <h2 style="margin:0 0 8px;font-size:16px;font-weight:800">Delete account</h2>
             <p style="margin:0 0 18px;font-size:13.5px;line-height:1.6;color:var(--muted);font-weight:600">Once your account is deleted, all of its resources and data will be permanently deleted. This cannot be undone.</p>
-            <form method="POST" action="{{ route('profile.destroy') }}" onsubmit="return confirm('This action permanently deletes your account. Continue?')">
+            <form method="POST" action="{{ route('profile.destroy') }}" x-on:submit.prevent="$dispatch('confirm-ask', { form: $event.target, title: 'Delete your account?', message: 'This permanently deletes your account and all associated data. This action cannot be undone.', confirmLabel: 'Delete account' })">
                 @csrf
                 @method('DELETE')
                 <div style="display:flex;flex-direction:column;gap:7px;max-width:360px">

@@ -1,4 +1,4 @@
-<x-app-layout :activeRole="'admin'" :navRole="'admin'" :avatarRole="'admin'" :activeNav="'admin'">
+<x-app-layout :activeNav="'categories'">
 
     <div style="max-width:1380px;margin:0 auto;padding:30px 26px 60px">
         <a href="{{ route('admin.events.index') }}" style="border:0;background:none;cursor:pointer;font-size:13px;font-weight:700;color:var(--muted);padding:8px 0;margin-bottom:10px;text-decoration:none;display:inline-block">&larr; Back to admin console</a>
@@ -44,7 +44,7 @@
                         <div style="font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ $category->name }}</div>
                         <div style="font-size:11.5px;color:var(--muted);font-weight:600">{{ $category->slug }}</div>
                     </div>
-                    <span style="font-size:12px;color:var(--muted);font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ $category->description ?? '—' }}</span>
+                    <span style="font-size:12px;color:var(--muted);font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ $category->description ?? 'â€”' }}</span>
                     <span><span style="padding:4px 10px;border-radius:8px;font-size:11px;font-weight:800;background:var(--chip);color:var(--primary)">{{ $category->events_count }} events</span></span>
                     <div style="display:flex;gap:6px;justify-content:flex-end;align-items:center;flex-wrap:wrap">
                         <form method="POST" action="{{ route('admin.categories.update', $category) }}" style="display:flex;gap:6px;align-items:center">
@@ -55,10 +55,10 @@
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg>
                             </button>
                         </form>
-                        <form method="POST" action="{{ route('admin.categories.destroy', $category) }}" onsubmit="return confirm('Delete this category?')">
+                        <form method="POST" action="{{ route('admin.categories.destroy', $category) }}" x-on:submit.prevent="$dispatch('confirm-ask', { form: $event.target, title: 'Delete category?', message: 'This permanently deletes the category. This action cannot be undone.', confirmLabel: 'Delete category' })">
                             @csrf
                             @method('DELETE')
-                            <button type="submit" title="{{ $category->events_count > 0 ? 'Cannot delete — category has events' : 'Delete' }}" aria-label="Delete {{ $category->name }}" {{ $category->events_count > 0 ? 'disabled' : '' }} style="width:34px;height:34px;display:grid;place-items:center;border:1px solid {{ $category->events_count > 0 ? 'var(--border)' : 'rgba(220,38,38,.35)' }};background:var(--surface2);border-radius:9px;cursor:{{ $category->events_count > 0 ? 'not-allowed' : 'pointer' }};color:var(--err);opacity:{{ $category->events_count > 0 ? '.4' : '1' }}">
+                            <button type="submit" title="{{ $category->events_count > 0 ? 'Cannot delete â€” category has events' : 'Delete' }}" aria-label="Delete {{ $category->name }}" {{ $category->events_count > 0 ? 'disabled' : '' }} style="width:34px;height:34px;display:grid;place-items:center;border:1px solid {{ $category->events_count > 0 ? 'var(--border)' : 'rgba(220,38,38,.35)' }};background:var(--surface2);border-radius:9px;cursor:{{ $category->events_count > 0 ? 'not-allowed' : 'pointer' }};color:var(--err);opacity:{{ $category->events_count > 0 ? '.4' : '1' }}">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"></path></svg>
                             </button>
                         </form>

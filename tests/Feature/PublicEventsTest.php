@@ -3,6 +3,9 @@
 use App\Enums\EventStatus;
 use App\Models\Category;
 use App\Models\Event;
+use App\Models\Ticket;
+use App\Models\TicketType;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -271,5 +274,120 @@ class PublicEventsTest extends TestCase
         $events = $response->viewData('events');
         $this->assertSame(1, $events->total());
         $this->assertSame('Night Gig', $events->first()->title);
+    }
+
+    public function test_hero_stats_show_real_upcoming_count(): void
+    {
+        // Create 2 upcoming published events
+        Event::factory()->published()->count(2)->create([
+            'starts_at' => now()->addDays(5),
+        ]);
+        // Create 1 past published event (should NOT be counted)
+        Event::factory()->published()->create([
+            'starts_at' => now()->subDays(5),
+        ]);
+
+        $response = $this->get(route('events.index'));
+        $response->assertOk();
+
+        $heroStats = $response->viewData('heroStats');
+        $this->assertNotNull($heroStats);
+        $this->assertCount(2, $heroStats);
+
+        $upcoming = collect($heroStats)->firstWhere('label', 'Upcoming events');
+        $this->assertNotNull($upcoming);
+        $this->assertSame('2', $upcoming['value']);
+    }
+
+    public function test_hero_stats_tickets_sold_count(): void
+    {
+        $event = Event::factory()->published()->create();
+        $ticketType = TicketType::factory()->create(['event_id' => $event->id]);
+        $user = User::factory()->create();
+        Ticket::factory()->count(3)->create([
+            'event_id' => $event->id,
+            'ticket_type_id' => $ticketType->id,
+            'user_id' => $user->id,
+        ]);
+
+        $response = $this->get(route('events.index'));
+        $response->assertOk();
+
+        $heroStats = $response->viewData('heroStats');
+        $ticketsStat = collect($heroStats)->firstWhere('label', 'Tickets sold');
+        $this->assertNotNull($ticketsStat);
+        $this->assertSame('3', $ticketsStat['value']);
+    }
+
+    public function test_hero_stats_does_not_show_hardcoded_38k(): void
+    {
+        $response = $this->get(route('events.index'));
+        $response->assertOk();
+
+        $response->assertDontSee('38K');
+    }
+
+    public function test_hero_stats_does_not_show_hardcoded_4_8_rating(): void
+    {
+        $response = $this->get(route('events.index'));
+        $response->assertOk();
+
+        $heroStats = $response->viewData('heroStats');
+        $ratingStat = collect($heroStats)->firstWhere('label', 'Avg. rating');
+        $this->assertNull($ratingStat);
+        $this->assertCount(2, $heroStats);
+    }
+
+    public function test_zero_count_categories_are_hidden(): void
+    {
+        $music = Category::factory()->create(['name' => 'Music', 'slug' => 'music']);
+        $empty = Category::factory()->create(['name' => 'Empty', 'slug' => 'empty']);
+
+        // Only Music has events
+        Event::factory()->published()->create(['category_id' => $music->id]);
+
+        $response = $this->get(route('events.index'));
+        $response->assertOk();
+
+        $categories = $response->viewData('categories');
+        // Music should be present, Empty should be filtered out
+        $this->assertTrue($categories->contains('name', 'Music'));
+        $this->assertFalse($categories->contains('name', 'Empty'));
+        $this->assertCount(1, $categories);
+    }
+
+    public function test_max_price_filter_returns_matching_events(): void
+    {
+        $cheapEvent = Event::factory()->published()->create(['title' => 'Cheap Show']);
+        TicketType::factory()->create(['event_id' => $cheapEvent->id, 'price' => 25]);
+
+        $expensiveEvent = Event::factory()->published()->create(['title' => 'VIP Gala']);
+        TicketType::factory()->create(['event_id' => $expensiveEvent->id, 'price' => 200]);
+
+        $response = $this->get(route('events.index', ['max_price' => 50]));
+        $response->assertOk();
+
+        $events = $response->viewData('events');
+        $this->assertSame(1, $events->total());
+        $this->assertSame('Cheap Show', $events->first()->title);
+    }
+
+    public function test_max_price_filter_excludes_events_without_ticket_types(): void
+    {
+        Event::factory()->published()->create(['title' => 'No Tickets']);
+
+        $response = $this->get(route('events.index', ['max_price' => 100]));
+        $response->assertOk();
+
+        $this->assertSame(0, $response->viewData('events')->total());
+    }
+
+    public function test_max_price_in_filters_array(): void
+    {
+        $response = $this->get(route('events.index', ['max_price' => 50]));
+        $response->assertOk();
+
+        $filters = $response->viewData('filters');
+        $this->assertSame('50', $filters['max_price']);
     }
 }

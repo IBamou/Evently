@@ -1,48 +1,45 @@
 <?php
 
-namespace Tests\Feature;
-
-use App\Enums\UserRole;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Tests\TestCase;
 
-class RoleRedirectTest extends TestCase
-{
-    use RefreshDatabase;
+uses(RefreshDatabase::class);
 
-    public function test_users_are_redirected_to_their_profile_after_login(): void
-    {
-        $user = User::factory()->create(['role' => UserRole::User]);
+it('redirects attendees to event discovery', function () {
+    $user = User::factory()->create();
 
-        $response = $this->actingAs($user)->get('/dashboard');
+    $this->actingAs($user)
+        ->get(route('dashboard'))
+        ->assertRedirect(route('events.index'));
+});
 
-        $response->assertRedirect(route('profile.edit'));
-    }
+it('redirects organizers to their workspace dashboard', function () {
+    $organizer = User::factory()->asOrganizer()->create();
 
-    public function test_organizers_are_redirected_to_the_organizer_dashboard(): void
-    {
-        $organizer = User::factory()->create(['role' => UserRole::Organizer]);
+    $this->actingAs($organizer)
+        ->get(route('dashboard'))
+        ->assertRedirect(route('organizer.dashboard'));
 
-        $response = $this->actingAs($organizer)->get('/dashboard');
+    $this->actingAs($organizer)
+        ->get(route('organizer.dashboard'))
+        ->assertOk()
+        ->assertSee('Welcome back');
+});
 
-        $response->assertRedirect(route('organizer.dashboard'));
+it('redirects admins to the platform dashboard', function () {
+    $admin = User::factory()->asAdmin()->create();
 
-        $this->actingAs($organizer)->get(route('organizer.dashboard'))
-            ->assertOk()
-            ->assertSee('Welcome back');
-    }
+    $this->actingAs($admin)
+        ->get(route('dashboard'))
+        ->assertRedirect(route('admin.dashboard'));
 
-    public function test_admins_are_redirected_to_the_admin_console(): void
-    {
-        $admin = User::factory()->create(['role' => UserRole::Admin]);
+    $this->actingAs($admin)
+        ->get(route('admin.dashboard'))
+        ->assertOk()
+        ->assertSee('Platform dashboard');
+});
 
-        $response = $this->actingAs($admin)->get('/dashboard');
-
-        $response->assertRedirect(route('admin.events.index'));
-
-        $this->actingAs($admin)->get(route('admin.events.index'))
-            ->assertOk()
-            ->assertSee('Admin console');
-    }
-}
+it('redirects guests to sign in', function () {
+    $this->get(route('dashboard'))
+        ->assertRedirect(route('login'));
+});

@@ -1,7 +1,7 @@
 {{-- Login — pixel-port of design rAuth (lines 601–658), login variant.
      Rendered inside <x-app-layout> (design shows the full shell header on auth routes). --}}
 
-<x-app-layout :activeRole="'guest'" :navRole="'guest'" :avatarRole="'guest'" :activeNav="'login'">
+<x-app-layout :activeNav="'login'">
 
 <div style="min-height:calc(100vh - 66px);display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr)">
 
@@ -9,7 +9,7 @@
     <div style="display:grid;place-items:center;padding:48px 26px">
         <div style="width:100%;max-width:400px">
             {{-- Logo --}}
-            <a href="/preview/events" style="display:flex;align-items:center;gap:9px;background:none;text-decoration:none;margin-bottom:24px">
+            <a href="{{ route('events.index') }}" style="display:flex;align-items:center;gap:9px;background:none;text-decoration:none;margin-bottom:24px">
                 <div style="width:34px;height:34px;border-radius:11px;background:linear-gradient(135deg,var(--primary),var(--cyan));display:grid;place-items:center;color:#fff;font-weight:800;font-size:15px">E</div>
                 <span style="font-weight:800;font-size:20px;letter-spacing:-.5px;color:var(--primary)">Evently</span>
             </a>

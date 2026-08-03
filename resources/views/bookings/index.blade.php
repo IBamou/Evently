@@ -1,49 +1,62 @@
-{{-- My bookings — pixel-port of design rUBookings (lines 660–693) --}}
+<x-app-layout :activeNav="'ubookings'">
+    <main style="max-width:1100px;margin:0 auto;padding:34px 26px 60px">
+        <h1 style="font-size:28px;font-weight:800;letter-spacing:-.9px;margin:0 0 6px">My bookings</h1>
+        <p style="font-size:14.5px;color:var(--muted);margin:0 0 22px">Every order you placed on Evently, newest first.</p>
 
-<x-app-layout :activeRole="'user'" :navRole="'user'" :avatarRole="'user'">
-@php
-    $bookings = [
-        ['ref' => 'BK-4C19A7', 'event' => 'Saad Lamjarred Concert', 'date' => 'Sat, 15 Jun', 'city' => 'Rabat', 'qty' => 2, 'total' => '630 MAD', 'status' => 'Confirmed', 'badgeBg' => 'rgba(22,163,74,.12)', 'badgeFg' => 'var(--ok)', 'grad' => 'linear-gradient(135deg,#1E3A8A,#7C3AED)'],
-        ['ref' => 'BK-77B210', 'event' => 'Digital Future Summit', 'date' => 'Tue, 11 Jun', 'city' => 'Casablanca', 'qty' => 1, 'total' => '420 MAD', 'status' => 'Pending', 'badgeBg' => 'rgba(217,119,6,.14)', 'badgeFg' => 'var(--warn)', 'grad' => 'linear-gradient(135deg,#082F49,#14B8A6)'],
-        ['ref' => 'BK-2E90FF', 'event' => 'Casablanca Street Food Fest', 'date' => 'Sat, 20 Jun', 'city' => 'Casablanca', 'qty' => 4, 'total' => 'Free', 'status' => 'Confirmed', 'badgeBg' => 'rgba(22,163,74,.12)', 'badgeFg' => 'var(--ok)', 'grad' => 'linear-gradient(135deg,#7C2D12,#F59E0B)'],
-        ['ref' => 'BK-19AA31', 'event' => 'The Phantom of the Opera', 'date' => 'Sun, 2 Jun', 'city' => 'Rabat', 'qty' => 2, 'total' => '378 MAD', 'status' => 'Cancelled', 'badgeBg' => 'rgba(220,38,38,.12)', 'badgeFg' => 'var(--err)', 'grad' => 'linear-gradient(135deg,#312E81,#DB2777)'],
-    ];
+        @if(session('success'))
+            <div style="padding:14px 18px;border-radius:12px;background:rgba(22,163,74,.12);border:1px solid rgba(22,163,74,.2);color:var(--ok);font-size:14px;margin-bottom:20px">{{ session('success') }}</div>
+        @endif
 
-    $allCount = count($bookings);
-    $confirmedCount = count(array_filter($bookings, fn($b) => $b['status'] === 'Confirmed'));
-    $pendingCount = count(array_filter($bookings, fn($b) => $b['status'] === 'Pending'));
-    $cancelledCount = count(array_filter($bookings, fn($b) => $b['status'] === 'Cancelled'));
-@endphp
+        {{-- Filter tabs --}}
+        <div style="display:flex;gap:10px;margin-bottom:18px;flex-wrap:wrap">
+            @php $activeStatus = request('status'); @endphp
+            <a href="{{ route('bookings.index') }}" style="min-height:40px;padding:9px 15px;border:1px solid {{ !$activeStatus ? 'var(--primary)' : 'var(--border)' }};background:{{ !$activeStatus ? 'var(--primary)' : 'var(--surface)' }};color:{{ !$activeStatus ? '#fff' : 'var(--text)' }};border-radius:11px;font-size:13px;font-weight:700;text-decoration:none">All <span style="opacity:.6">({{ $counts['all'] }})</span></a>
+            <a href="{{ route('bookings.index', ['status' => 'confirmed']) }}" style="min-height:40px;padding:9px 15px;border:1px solid {{ $activeStatus === 'confirmed' ? 'var(--primary)' : 'var(--border)' }};background:{{ $activeStatus === 'confirmed' ? 'var(--primary)' : 'var(--surface)' }};color:{{ $activeStatus === 'confirmed' ? '#fff' : 'var(--text)' }};border-radius:11px;font-size:13px;font-weight:700;text-decoration:none">Confirmed <span style="opacity:.6">({{ $counts['confirmed'] }})</span></a>
+            <a href="{{ route('bookings.index', ['status' => 'pending']) }}" style="min-height:40px;padding:9px 15px;border:1px solid {{ $activeStatus === 'pending' ? 'var(--primary)' : 'var(--border)' }};background:{{ $activeStatus === 'pending' ? 'var(--primary)' : 'var(--surface)' }};color:{{ $activeStatus === 'pending' ? '#fff' : 'var(--text)' }};border-radius:11px;font-size:13px;font-weight:700;text-decoration:none">Pending <span style="opacity:.6">({{ $counts['pending'] }})</span></a>
+            <a href="{{ route('bookings.index', ['status' => 'cancelled']) }}" style="min-height:40px;padding:9px 15px;border:1px solid {{ $activeStatus === 'cancelled' ? 'var(--primary)' : 'var(--border)' }};background:{{ $activeStatus === 'cancelled' ? 'var(--primary)' : 'var(--surface)' }};color:{{ $activeStatus === 'cancelled' ? '#fff' : 'var(--text)' }};border-radius:11px;font-size:13px;font-weight:700;text-decoration:none">Cancelled <span style="opacity:.6">({{ $counts['cancelled'] }})</span></a>
+        </div>
 
-<div style="max-width:1100px;margin:0 auto;padding:34px 26px 60px">
-    <h1 style="margin:0 0 6px;font-size:28px;font-weight:800;letter-spacing:-.9px">My bookings</h1>
-    <p style="margin:0 0 22px;color:var(--muted);font-size:14.5px">Every order you placed on Evently, newest first.</p>
-
-    {{-- Filter tabs --}}
-    <div style="display:flex;gap:10px;margin-bottom:18px;flex-wrap:wrap">
-        <button type="button" style="min-height:40px;padding:9px 15px;border:1px solid var(--primary);background:var(--primary);color:#fff;border-radius:11px;cursor:pointer;font-size:13px;font-weight:700">All <span style="opacity:.6">{{ $allCount }}</span></button>
-        <button type="button" style="min-height:40px;padding:9px 15px;border:1px solid var(--border);background:var(--surface);color:var(--text);border-radius:11px;cursor:pointer;font-size:13px;font-weight:700">Confirmed <span style="opacity:.6">{{ $confirmedCount }}</span></button>
-        <button type="button" style="min-height:40px;padding:9px 15px;border:1px solid var(--border);background:var(--surface);color:var(--text);border-radius:11px;cursor:pointer;font-size:13px;font-weight:700">Pending <span style="opacity:.6">{{ $pendingCount }}</span></button>
-        <button type="button" style="min-height:40px;padding:9px 15px;border:1px solid var(--border);background:var(--surface);color:var(--text);border-radius:11px;cursor:pointer;font-size:13px;font-weight:700">Cancelled <span style="opacity:.6">{{ $cancelledCount }}</span></button>
-    </div>
-
-    {{-- Booking cards --}}
-    <div style="display:flex;flex-direction:column;gap:12px">
-        @foreach ($bookings as $b)
-            <article style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:18px;display:flex;align-items:center;gap:18px;flex-wrap:wrap">
-                <div style="width:58px;height:58px;border-radius:14px;background:{{ $b['grad'] }};flex:0 0 auto"></div>
-                <div style="flex:1;min-width:190px">
-                    <div style="font-size:16px;font-weight:700;letter-spacing:-.2px">{{ $b['event'] }}</div>
-                    <div style="font-size:12.5px;color:var(--muted);font-weight:600;margin-top:4px">{{ $b['date'] }} · {{ $b['city'] }} · ref {{ $b['ref'] }}</div>
+        {{-- Booking cards --}}
+        <div style="display:flex;flex-direction:column;gap:12px">
+            @forelse($bookings as $booking)
+                @php
+                    $statusColor = match($booking->status->value) {
+                        'confirmed' => 'var(--ok)',
+                        'pending' => 'var(--warn)',
+                        'cancelled', 'expired' => 'var(--err)',
+                        default => 'var(--muted)',
+                    };
+                    $statusBg = match($booking->status->value) {
+                        'confirmed' => 'rgba(22,163,74,.12)',
+                        'pending' => 'rgba(217,119,6,.14)',
+                        'cancelled', 'expired' => 'rgba(220,38,38,.12)',
+                        default => 'var(--chip)',
+                    };
+                @endphp
+                <article style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:18px;display:flex;align-items:center;gap:18px;flex-wrap:wrap">
+                    <div style="width:58px;height:58px;border-radius:14px;background:linear-gradient(135deg,var(--primary),var(--cyan));flex-shrink:0"></div>
+                    <div style="flex:1;min-width:190px">
+                        <div style="font-size:16px;font-weight:700;margin-bottom:4px">{{ $booking->event->title ?? 'Event' }}</div>
+                        <div style="font-size:12.5px;color:var(--muted);font-weight:600">{{ $booking->event->starts_at?->format('M d, Y') ?? '' }} &middot; {{ $booking->event->city ?? '' }} &middot; {{ $booking->reference }}</div>
+                    </div>
+                    <div style="text-align:right;flex-shrink:0">
+                        <div style="font-size:11px;color:var(--muted);font-weight:800;text-transform:uppercase;margin-bottom:2px">{{ $booking->tickets_count }} ticket{{ $booking->tickets_count !== 1 ? 's' : '' }}</div>
+                        <div style="font-size:16px;font-weight:800">{{ $booking->total > 0 ? number_format($booking->total, 0).' '.$booking->currency : 'Free' }}</div>
+                    </div>
+                    <div style="padding:7px 12px;border-radius:9px;background:{{ $statusBg }};color:{{ $statusColor }};font-size:11.5px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;white-space:nowrap">{{ $booking->status->label() }}</div>
+                    <a href="{{ route('bookings.show', $booking) }}" style="padding:11px 16px;border:1px solid var(--border);border-radius:11px;background:var(--surface2);color:var(--text);font-size:13px;font-weight:700;text-decoration:none;white-space:nowrap;min-height:44px">Details</a>
+                </article>
+            @empty
+                <div style="border:2px dashed var(--border);border-radius:18px;padding:60px;text-align:center">
+                    <div style="font-size:17px;font-weight:800;margin-bottom:6px">No bookings yet</div>
+                    <div style="font-size:14px;color:var(--muted);margin-bottom:16px">Browse events to get started</div>
+                    <a href="{{ route('events.index') }}" style="display:inline-block;padding:10px 20px;background:var(--primary);color:#fff;border-radius:11px;font-size:13px;font-weight:700;text-decoration:none">Browse events</a>
                 </div>
-                <div style="text-align:right">
-                    <div style="font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.6px">{{ $b['qty'] }} tickets</div>
-                    <div style="font-size:16px;font-weight:800">{{ $b['total'] }}</div>
-                </div>
-                <span style="padding:7px 12px;border-radius:9px;font-size:11.5px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;background:{{ $b['badgeBg'] }};color:{{ $b['badgeFg'] }}">{{ $b['status'] }}</span>
-                <button type="button" onclick="location.href='/preview/booking'" style="border:1px solid var(--border);background:var(--surface2);cursor:pointer;font-size:13px;font-weight:700;padding:11px 16px;border-radius:11px;min-height:44px">Details</button>
-            </article>
-        @endforeach
-    </div>
-</div>
+            @endforelse
+        </div>
+
+        @if($bookings->hasPages())
+            <div style="margin-top:24px;text-align:center">{{ $bookings->links() }}</div>
+        @endif
+    </main>
 </x-app-layout>

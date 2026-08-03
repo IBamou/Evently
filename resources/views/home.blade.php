@@ -1,49 +1,37 @@
 {{-- Home page — pixel-port of design-evently-home.html (hero + featured + all events + newsletter).
-     Rendered inside <x-app-layout> (sidebar/header/footer live in layouts/app.blade.php — mimo).
-     Role-aware shell: ?role=user shows the USER header (Events·My bookings·My tickets·Profile, YB avatar)
-     exactly like the design's role tabs — content is identical for guest & user (design L1588). --}}
+     Rendered inside <x-app-layout> (sidebar/header/footer live in layouts/app.blade.php — mimo). --}}
+@use('App\Helpers\Helper')
+
+<x-app-layout :activeNav="'events'">
 @php
-    $role = request('role', 'guest');
-    $role = in_array($role, ['guest', 'user', 'organizer', 'admin'], true) ? $role : 'guest';
-@endphp
-
-<x-app-layout :activeRole="$role" :navRole="$role" :avatarRole="$role" :activeNav="'events'">
-@php
-    // Hero branding stats — no tickets-sales/ratings tables exist yet, so these
-    // stay as the design's values (display-only hero copy, not event data).
-    $heroStats = [
-        ['value' => '124', 'label' => 'Upcoming events'],
-        ['value' => '38K', 'label' => 'Tickets sold'],
-        ['value' => '4.8★', 'label' => 'Avg. rating'],
-    ];
-
-    // Hero quick-filter chips (design). Static shortcut buttons — kept as-is.
-    $heroChips = [
-        ['label' => 'Today', 'active' => false],
-        ['label' => 'This weekend', 'active' => false],
-        ['label' => 'Free', 'active' => false],
-        ['label' => 'Online', 'active' => false],
-        ['label' => 'Evening', 'active' => false],
-        ['label' => 'Near me', 'active' => false],
-    ];
-
-    // Sidebar filter groups, wired to the controller's real params
-    // (category slug / format / time of day). Options link back to the
-    // listing, keeping the current search/city/sort/role query intact.
     $activeCategory = $filters['category'] ?? '';
     $activeFormat = $filters['format'] ?? '';
     $activeTime = $filters['time'] ?? '';
 
-    $mkFilterUrl = function (array $overrides) use ($role, $filters): string {
+    $mkFilterUrl = function (array $overrides) use ($filters): string {
         $query = $filters;
         unset($query['per_page']);
-        if ($role !== 'guest') {
-            $query['role'] = $role;
-        }
 
         return route('events.index', array_filter(array_merge($query, $overrides), fn ($v) => $v !== null && $v !== ''));
     };
 
+    // Hero quick-filter chips (design). Wired to the real controller params
+    // (format / time / starts_from / starts_to / max_price).
+    $today = now()->format('Y-m-d');
+    $weekendStart = now()->next(Carbon\Carbon::SATURDAY)->format('Y-m-d');
+    $weekendEnd = now()->next(Carbon\Carbon::SUNDAY)->format('Y-m-d');
+
+    $heroChips = [
+        ['label' => 'Today', 'active' => ($filters['starts_from'] ?? '') === $today, 'url' => $mkFilterUrl(['starts_from' => $today, 'starts_to' => $today])],
+        ['label' => 'This weekend', 'active' => ($filters['starts_from'] ?? '') === $weekendStart, 'url' => $mkFilterUrl(['starts_from' => $weekendStart, 'starts_to' => $weekendEnd])],
+        ['label' => 'Free', 'active' => ($filters['max_price'] ?? '') === '0', 'url' => $mkFilterUrl(['max_price' => '0'])],
+        ['label' => 'Online', 'active' => $activeFormat === 'online', 'url' => $mkFilterUrl(['format' => 'online'])],
+        ['label' => 'Evening', 'active' => $activeTime === 'evening', 'url' => $mkFilterUrl(['time' => 'evening'])],
+    ];
+
+    // Sidebar filter groups, wired to the controller's real params
+    // (category slug / format / time of day). Options link back to the
+    // listing, keeping the current search/city/sort query intact.
     $categoryOptions = [['label' => 'All categories', 'count' => $events->total(), 'checked' => $activeCategory === '', 'url' => $mkFilterUrl(['category' => ''])]];
     foreach ($categories as $category) {
         $categoryOptions[] = [
@@ -78,31 +66,19 @@
         ],
     ];
 
-    // Category slug → cover gradient (design card gradients). Unknown categories
-    // fall back to the brand primary→cyan gradient.
-    $categoryGradients = [
-        'music' => 'linear-gradient(135deg,#1565D8,#0EA5E9)',
-        'business' => 'linear-gradient(135deg,#D97706,#F59E0B)',
-        'tech' => 'linear-gradient(135deg,#7C3AED,#0EA5E9)',
-        'art' => 'linear-gradient(135deg,#14B8A6,#0EA5E9)',
-        'sports' => 'linear-gradient(135deg,#0EA5E9,#14B8A6)',
-        'food-drinks' => 'linear-gradient(135deg,#DC2626,#F59E0B)',
-    ];
-
-    // Cover background: real banner image when uploaded, otherwise the category gradient.
-    $coverBg = function ($event) use ($categoryGradients) {
+    // Cover background: real banner image when uploaded, otherwise the category
+    // gradient from the shared helper (App\Helpers\Helper — was duplicated here).
+    $coverBg = function ($event) {
         if ($event->banner_url) {
             return "url('" . e($event->banner_url) . "') center/cover";
         }
-        return $categoryGradients[$event->category?->slug] ?? 'linear-gradient(135deg,var(--primary),var(--cyan))';
+        return Helper::categoryGradient($event->category?->slug) ?? 'linear-gradient(135deg,var(--primary),var(--cyan))';
     };
 
     // Date line "Fri 24 Jul" — design format.
     $cardDate = fn ($event) => $event->starts_at?->format('D j M') ?: '';
 
-    // Event cards keep the ?role= shell on the shared public pages.
-    $roleSuffix = $role !== 'guest' ? '?role=' . $role : '';
-    $detailUrl = fn ($event) => route('events.show', $event->slug) . $roleSuffix;
+    $detailUrl = fn ($event) => route('events.show', $event->slug);
 
     // Design sort labels → real controller sort keys. There is no price column
     // yet, so the price options map to title ordering — labeled as Title sorts.
@@ -146,14 +122,14 @@
 
                 <div style="animation:up .7s .1s ease both">
                     <form method="GET" action="{{ route('events.index') }}" style="background:var(--surface);border:1px solid var(--border);border-radius:18px;box-shadow:var(--shadow);padding:14px;display:flex;gap:10px;align-items:center;margin:0">
-                        @if ($role !== 'guest')<input type="hidden" name="role" value="{{ $role }}">@endif
+
                         <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2" stroke-linecap="round" style="margin-left:6px;flex:0 0 auto"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg>
                         <input type="text" name="search" value="{{ $filters['search'] ?? '' }}" class="needs-focus" placeholder="Search events, categories or venues…" aria-label="Search events" style="flex:1;min-width:0;border:0;background:none;font-size:15px;padding:8px 0;outline:none">
                         <button type="submit" style="border:0;cursor:pointer;background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:#fff;font-weight:700;font-size:14px;padding:12px 22px;border-radius:12px;min-height:44px">Search</button>
                     </form>
                     <div style="display:flex;gap:9px;flex-wrap:wrap;margin-top:14px">
                         @foreach ($heroChips as $chip)
-                            <button type="button" class="needs-focus" style="display:inline-flex;align-items:center;gap:7px;min-height:40px;padding:9px 15px;border-radius:11px;cursor:pointer;font-size:13px;font-weight:700;border:1px solid {{ $chip['active'] ? 'var(--primary)' : 'var(--border)' }};background:{{ $chip['active'] ? 'var(--primary)' : 'var(--surface2)' }};color:{{ $chip['active'] ? '#fff' : 'var(--text)' }};box-shadow:var(--shadow)">{{ $chip['label'] }}</button>
+                            <a href="{{ $chip['url'] }}" class="needs-focus" style="display:inline-flex;align-items:center;gap:7px;min-height:40px;padding:9px 15px;border-radius:11px;cursor:pointer;font-size:13px;font-weight:700;text-decoration:none;border:1px solid {{ $chip['active'] ? 'var(--primary)' : 'var(--border)' }};background:{{ $chip['active'] ? 'var(--primary)' : 'var(--surface2)' }};color:{{ $chip['active'] ? '#fff' : 'var(--text)' }};box-shadow:var(--shadow)">{{ $chip['label'] }}</a>
                         @endforeach
                     </div>
                 </div>
@@ -180,7 +156,7 @@
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="1.9" stroke-linejoin="round"><path d="m12 3 2.9 5.9 6.6.9-4.8 4.6 1.2 6.5L12 17.8 6.1 20.9l1.2-6.5L2.5 9.8l6.6-.9z"></path></svg>
                 <h2 style="margin:0;font-size:17px;font-weight:800;letter-spacing:-.3px">Featured events</h2>
                 <div style="flex:1"></div>
-                <a href="{{ route('events.index') . $roleSuffix }}" style="border:0;background:none;cursor:pointer;font-size:13px;font-weight:700;color:var(--primary);text-decoration:none">View all</a>
+                <a href="{{ route('events.index') }}" style="border:0;background:none;cursor:pointer;font-size:13px;font-weight:700;color:var(--primary);text-decoration:none">View all</a>
             </div>
 
             <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px">
@@ -188,9 +164,6 @@
                     <article class="ev-card" onclick="location.href='{{ $detailUrl($event) }}'" style="border:1px solid var(--border);border-radius:16px;overflow:hidden;background:var(--surface);cursor:pointer">
                         <div style="position:relative;height:150px;background:{{ $coverBg($event) }}">
                             <span style="position:absolute;bottom:11px;left:11px;padding:5px 10px;border-radius:8px;background:rgba(255,255,255,.92);color:#0B2545;font-size:10.5px;font-weight:800;letter-spacing:.5px;text-transform:uppercase">{{ $event->category?->name ?? 'Event' }}</span>
-                            <button type="button" onclick="event.stopPropagation()" aria-label="Save event" aria-pressed="false" style="position:absolute;top:9px;right:9px;width:34px;height:34px;border-radius:50%;border:0;cursor:pointer;background:rgba(255,255,255,.9);display:grid;place-items:center">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0B2545" stroke-width="1.8" stroke-linejoin="round"><path d="M12 20s-7-4.4-7-9.4A4.1 4.1 0 0 1 12 8a4.1 4.1 0 0 1 7 2.6c0 5-7 9.4-7 9.4z"></path></svg>
-                            </button>
                         </div>
                         <div style="padding:14px">
                             <h3 style="margin:0 0 9px;font-size:15px;font-weight:700;letter-spacing:-.2px;line-height:1.3">{{ $event->title }}</h3>
@@ -212,7 +185,7 @@
                 <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M4 6h16M7 12h10M10 18h4"></path></svg>
                 <span style="font-weight:800;font-size:14px">Filters</span>
                 <div style="flex:1"></div>
-                <a href="{{ route('events.index') . $roleSuffix }}" style="border:0;background:none;cursor:pointer;font-size:12px;font-weight:700;color:var(--primary);text-decoration:none">Clear all</a>
+                <a href="{{ route('events.index') }}" style="border:0;background:none;cursor:pointer;font-size:12px;font-weight:700;color:var(--primary);text-decoration:none">Clear all</a>
             </div>
 
             @foreach ($filterGroups as $group)
@@ -234,14 +207,24 @@
 
             <div style="border-top:1px solid var(--border);padding-top:14px">
                 <div style="font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);margin-bottom:12px">Max price</div>
-                <input type="range" class="needs-focus" min="0" max="1000" step="50" value="600" aria-label="Maximum price" style="width:100%;accent-color:var(--primary)">
+                <form method="GET" action="{{ route('events.index') }}" id="max-price-form">
+                    @foreach (['category', 'format', 'time', 'search', 'city', 'sort', 'starts_from', 'starts_to'] as $keep)
+                        @if (filled($filters[$keep] ?? null))
+                            <input type="hidden" name="{{ $keep }}" value="{{ $filters[$keep] }}">
+                        @endif
+                    @endforeach
+                    <input type="range" class="needs-focus" name="max_price" min="0" max="1000" step="50"
+                           value="{{ $filters['max_price'] ?? 600 }}" aria-label="Maximum price"
+                           onchange="this.form.submit()"
+                           style="width:100%;accent-color:var(--primary)">
+                </form>
                 <div style="display:flex;justify-content:space-between;font-size:11px;font-weight:700;color:var(--muted);margin-top:6px"><span>0 MAD</span><span>600 MAD</span></div>
             </div>
         </aside>
 
         <div>
             <form method="GET" action="{{ route('events.index') }}" style="display:flex;align-items:center;gap:14px;margin-bottom:18px;flex-wrap:wrap">
-                @if ($role !== 'guest')<input type="hidden" name="role" value="{{ $role }}">@endif
+
                 @if (filled($filters['search'] ?? null))<input type="hidden" name="search" value="{{ $filters['search'] }}">@endif
                 <h2 style="margin:0;font-size:22px;font-weight:800;letter-spacing:-.6px">{{ $events->total() }} events found</h2>
                 <div style="flex:1"></div>
@@ -280,11 +263,8 @@
                 <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px">
                     @foreach ($events as $event)
                         <article class="ev-card" onclick="location.href='{{ $detailUrl($event) }}'" style="border:1px solid var(--border);border-radius:16px;overflow:hidden;background:var(--surface);cursor:pointer">
-                            <div style="position:relative;height:160px;background:{{ $coverBg($event) }}">
+                            <div style="position:relative;height:168px;background:{{ $coverBg($event) }}">
                                 <span style="position:absolute;top:11px;left:11px;padding:5px 10px;border-radius:8px;background:rgba(255,255,255,.93);color:#0B2545;font-size:10.5px;font-weight:800;letter-spacing:.5px;text-transform:uppercase">{{ $event->category?->name ?? 'Event' }}</span>
-                                <button type="button" onclick="event.stopPropagation()" aria-label="Save event" aria-pressed="false" style="position:absolute;top:9px;right:9px;width:34px;height:34px;border-radius:50%;border:0;cursor:pointer;background:rgba(255,255,255,.9);display:grid;place-items:center">
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0B2545" stroke-width="1.8" stroke-linejoin="round"><path d="M12 20s-7-4.4-7-9.4A4.1 4.1 0 0 1 12 8a4.1 4.1 0 0 1 7 2.6c0 5-7 9.4-7 9.4z"></path></svg>
-                                </button>
                             </div>
                             <div style="padding:16px;flex:1;display:flex;flex-direction:column;gap:10px">
                                 <h3 style="margin:0;font-size:16px;font-weight:700;letter-spacing:-.2px">{{ $event->title }}</h3>
@@ -310,6 +290,12 @@
 
     {{-- ===================== NEWSLETTER ===================== --}}
     <section aria-label="Newsletter" style="max-width:1380px;margin:0 auto;padding:0 26px 60px">
+        @if (session('success'))
+            <div role="status" style="margin-bottom:16px;padding:13px 18px;border-radius:12px;font-size:13.5px;font-weight:700;background:color-mix(in srgb,var(--ok) 12%,transparent);border:1px solid color-mix(in srgb,var(--ok) 40%,transparent);color:var(--ok)">{{ session('success') }}</div>
+        @endif
+        @if ($errors->has('email'))
+            <div role="alert" style="margin-bottom:16px;padding:13px 18px;border-radius:12px;font-size:13.5px;font-weight:700;background:color-mix(in srgb,#E5484D 10%,transparent);border:1px solid color-mix(in srgb,#E5484D 40%,transparent);color:#E5484D">{{ $errors->first('email') }}</div>
+        @endif
         <div style="position:relative;overflow:hidden;border-radius:20px;background:linear-gradient(120deg,var(--primary-dark),var(--primary) 55%,var(--cyan));padding:38px;display:flex;align-items:center;gap:26px;flex-wrap:wrap">
             {{-- Wave decoration --}}
             <div style="position:absolute;inset:auto 0 0 0;height:70px;opacity:.28;animation:wave 13s linear infinite;width:200%">
@@ -323,12 +309,13 @@
             </div>
 
             {{-- Email input + button --}}
-            <div style="position:relative;display:flex;gap:10px;background:rgba(255,255,255,.14);padding:8px;border-radius:14px;border:1px solid rgba(255,255,255,.28)">
-                <input placeholder="Enter your email" aria-label="Email" class="needs-focus"
-                       style="border:0;background:none;padding:11px 14px;font-size:14px;color:#fff;outline:none;min-width:220px">
-                <button type="button"
+            <form method="POST" action="{{ route('newsletter.store') }}" style="position:relative;display:flex;gap:10px;background:rgba(255,255,255,.14);padding:8px;border-radius:14px;border:1px solid rgba(255,255,255,.28);margin:0">
+                @csrf
+                <input type="email" name="email" value="{{ old('email') }}" required placeholder="Enter your email" aria-label="Email" class="needs-focus"
+                       style="border:0;background:none;padding:11px 14px;font-size:14px;color:#fff;outline:none;min-width:220px;min-height:44px">
+                <button type="submit"
                         style="border:0;cursor:pointer;background:#fff;color:var(--primary-dark);font-weight:800;font-size:14px;padding:12px 22px;border-radius:10px;min-height:44px">Subscribe</button>
-            </div>
+            </form>
         </div>
     </section>
 </x-app-layout>

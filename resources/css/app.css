@@ -21,10 +21,11 @@ html {
   --border: #E1ECF9;
   --text: #0B2545;
   --muted: #5B7794;
+  --disabled: #4E6A8C;
   --shadow: 0 1px 2px rgba(11,37,69,.05), 0 10px 28px rgba(11,37,69,.06);
-  --ok: #16A34A;
-  --warn: #D97706;
-  --err: #DC2626;
+  --ok: #15803D;
+  --warn: #B45309;
+  --err: #B91C1C;
   --hero1: #EAF5FF;
   --hero2: #D3EAFF;
   --hero3: #B9DDFA;
@@ -46,7 +47,14 @@ html[data-theme="dark"] {
   --hero3: #123055;
   --chip: #12294552;
   --header-bg: rgba(14,33,56,.85);
+  /* Brighter accents for dark surfaces (light-theme values are too dim there). */
+  --ok: #22C55E;
+  --warn: #F59E0B;
+  --err: #EF4444;
 }
+
+/* ── Alpine loading guard: hide un-initialized Alpine sections ── */
+[x-cloak] { display: none !important; }
 
 /* ── Base resets ── */
 * { box-sizing: border-box; }

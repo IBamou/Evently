@@ -1,16 +1,9 @@
+@use('App\Helpers\Helper')
 @php
-    // Category cover gradients (mirrors home.blade.php, keyed by category slug).
-    $categoryGradients = [
-        'music' => 'linear-gradient(135deg,#1565D8,#0EA5E9)',
-        'business' => 'linear-gradient(135deg,#D97706,#F59E0B)',
-        'tech' => 'linear-gradient(135deg,#7C3AED,#0EA5E9)',
-        'art' => 'linear-gradient(135deg,#14B8A6,#0EA5E9)',
-        'sports' => 'linear-gradient(135deg,#0EA5E9,#14B8A6)',
-        'food-drinks' => 'linear-gradient(135deg,#DC2626,#F59E0B)',
-    ];
-    $rowGrad = fn ($event) => $categoryGradients[$event->category?->slug] ?? 'linear-gradient(135deg,#1E3A8A,#7C3AED)';
+    // Row cover gradient â€” shared helper (App\Helpers\Helper, was duplicated here).
+    $rowGrad = fn ($event) => Helper::categoryGradient($event->category?->slug) ?? 'linear-gradient(135deg,#1E3A8A,#7C3AED)';
 
-    // Status → [badgeBg, badgeFg]
+    // Status â†’ [badgeBg, badgeFg]
     $statusBadge = [
         'draft' => ['rgba(91,119,148,.14)', 'var(--muted)'],
         'under_review' => ['rgba(217,119,6,.14)', 'var(--warn)'],
@@ -28,7 +21,7 @@
     }
 @endphp
 
-<x-app-layout :activeRole="'organizer'" :navRole="'organizer'" :avatarRole="'organizer'" :activeNav="'oevents'">
+<x-app-layout :activeNav="'oevents'">
 
     <div style="max-width:1380px;margin:0 auto;padding:30px 26px 60px">
         {{-- Header row --}}
@@ -82,12 +75,20 @@
                             <div style="font-size:11.5px;color:var(--muted);font-weight:600">{{ $event->city }}</div>
                         </div>
                     </div>
-                    <span style="color:var(--muted);font-weight:600">{{ $event->starts_at?->format('D, j M Y') ?? '—' }}</span>
-                    {{-- No ticket/pricing tables exist yet — honest placeholder. --}}
-                    <span style="font-weight:700;color:var(--muted)">—</span>
-                    <span style="font-size:12px;font-weight:700;color:var(--muted)">—</span>
+                    <span style="color:var(--muted);font-weight:600">{{ $event->starts_at?->format('D, j M Y') ?? 'â€”' }}</span>
+                    {{-- No ticket/pricing tables exist yet â€” honest placeholder. --}}
+                    <span style="font-weight:700;color:var(--muted)">â€”</span>
+                    <span style="font-size:12px;font-weight:700;color:var(--muted)">â€”</span>
                     <span><span style="padding:5px 10px;border-radius:8px;font-size:11px;font-weight:800;text-transform:uppercase;background:{{ $badgeBg }};color:{{ $badgeFg }}">{{ $event->status->label() }}</span></span>
                     <div style="display:flex;gap:6px;justify-content:flex-end">
+                        <a href="{{ route('organizer.ticket-types.index', $event) }}" title="Ticket types" aria-label="Ticket types" style="width:34px;height:34px;display:grid;place-items:center;border:1px solid var(--border);background:var(--surface2);border-radius:9px;cursor:pointer;color:var(--muted);text-decoration:none">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"><path d="M3 9V7a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v2a2 2 0 0 0 0 6v2a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-6z"></path></svg>
+                        </a>
+                        @if ($event->status->isPublished())
+                            <a href="{{ route('organizer.bookings.index', $event) }}" title="Bookings" aria-label="Bookings" style="width:34px;height:34px;display:grid;place-items:center;border:1px solid var(--border);background:var(--surface2);border-radius:9px;cursor:pointer;color:var(--muted);text-decoration:none">
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"></path></svg>
+                            </a>
+                        @endif
                         @if ($event->status->isPublished())
                             <a href="{{ route('events.show', $event) }}" target="_blank" rel="noopener" title="View" aria-label="View" style="width:34px;height:34px;display:grid;place-items:center;border:1px solid var(--border);background:var(--surface2);border-radius:9px;cursor:pointer;color:var(--muted);text-decoration:none">
                                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7zM12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"></path></svg>
@@ -107,7 +108,7 @@
                             </form>
                         @endif
                         @if ($event->status->isPublished())
-                            <form method="POST" action="{{ route('organizer.events.cancel', $event) }}" onsubmit="return confirm('Cancel this event? Attendees will be notified.')">
+                            <form method="POST" action="{{ route('organizer.events.cancel', $event) }}" x-on:submit.prevent="$dispatch('confirm-ask', { form: $event.target, title: 'Cancel this event?', message: 'This cancels the event and notifies attendees. This action cannot be undone.', confirmLabel: 'Cancel event' })">
                                 @csrf
                                 <button type="submit" title="Cancel event" aria-label="Cancel event" style="width:34px;height:34px;display:grid;place-items:center;border:1px solid var(--border);background:var(--surface2);border-radius:9px;cursor:pointer;color:var(--warn)">
                                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M5.6 5.6l12.8 12.8"></path></svg>
@@ -115,7 +116,7 @@
                             </form>
                         @endif
                         @if ($event->status->isDraft() || $event->status->isUnderReview())
-                            <form method="POST" action="{{ route('organizer.events.destroy', $event) }}" onsubmit="return confirm('Delete this event?')">
+                            <form method="POST" action="{{ route('organizer.events.destroy', $event) }}" x-on:submit.prevent="$dispatch('confirm-ask', { form: $event.target, title: 'Delete this event?', message: 'This permanently deletes the event. This action cannot be undone.', confirmLabel: 'Delete event' })">
                                 @csrf
                                 @method('DELETE')
                                 <button type="submit" title="Delete" aria-label="Delete" style="width:34px;height:34px;display:grid;place-items:center;border:1px solid var(--border);background:var(--surface2);border-radius:9px;cursor:pointer;color:var(--err)">

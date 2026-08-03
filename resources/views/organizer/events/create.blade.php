@@ -1,9 +1,9 @@
 @php
-    // City suggestions — no cities table exists, so the design's suggestion list is kept.
-    $cities = ['Casablanca', 'Rabat', 'Marrakech', 'Tanger', 'Chefchaouen', 'Salé'];
+    // City suggestions â€” no cities table exists, so the design's suggestion list is kept.
+    $cities = ['Casablanca', 'Rabat', 'Marrakech', 'Tanger', 'Chefchaouen', 'SalÃ©'];
 @endphp
 
-<x-app-layout :activeRole="'organizer'" :navRole="'organizer'" :avatarRole="'organizer'" :activeNav="'oevents'">
+<x-app-layout :activeNav="'oevents'">
 
     <div style="max-width:960px;margin:0 auto;padding:30px 26px 60px">
         <a href="{{ route('organizer.events.index') }}" style="border:0;background:none;cursor:pointer;font-size:13px;font-weight:700;color:var(--muted);padding:8px 0;margin-bottom:10px;text-decoration:none;display:inline-block">&larr; Back to my events</a>

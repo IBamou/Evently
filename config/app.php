@@ -123,4 +123,16 @@ return [
         'store' => env('APP_MAINTENANCE_STORE', 'database'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Default Currency
+    |--------------------------------------------------------------------------
+    |
+    | The default currency used by the application for ticket pricing and
+    | payment records. Override with the CURRENCY env variable if needed.
+    |
+    */
+
+    'currency' => env('CURRENCY', 'MAD'),
+
 ];
