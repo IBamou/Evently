@@ -2088,3 +2088,15 @@ Moved the layout-critical flex styles into the CSS classes (which Alpine's `:sty
 - Retest from UI after worker fix: drawer transitioned start -> workspace, Draft tab with suggestions + missing-info box, Apply/New draft buttons, NO timeout error. Polish tab correctly hidden until form has content (canPolish gating works).
 
 **Gotcha for user:** worker must be php artisan queue:work --queue=ai-copilot --timeout=150 (or listen). Default queue:work never touches AI jobs. UI poll timeout (~90s) is a UX ceiling, not a backend failure - job may still succeed later in DB.
+
+---
+
+## STATE SYNC 11 -- Branch finalized: committed + pushed (2026-08-04, build)
+
+**feature/ai-event-copilot is DONE and pushed.** Commit 6099215 (57 files, +5885/-7): "Implement AI event copilot: async draft/transform/marketing agents, copilot drawer UI, usage limits, fallback provider". Working tree clean, branch tracks origin/feature/ai-event-copilot (https://github.com/IBamou/Evently).
+
+**Pre-commit gates:** Pint clean; FULL SUITE 348 passed / 1064 assertions; secret scan (sk-/gsk_/AIza patterns) clean; .env NOT tracked (keys only live locally).
+
+**Included:** AI backend (3 agents + actions + DTOs + recorder + router + job + controller + 4 requests + 3 migrations + 2 models + 2 factories + trait + configs), copilot drawer UI (ai-copilot.blade.php + create/edit includes + confirm-modal action callback), tests/Feature/Ai (6 files), docs/, stubs/, .env.example config block, team-notes STATE SYNC 1-10.
+
+**Status:** branch pushed, no PR opened (user hasn't asked). User runs worker manually: php artisan queue:work --queue=ai-copilot --timeout=150 (note: their default queue:work does NOT pick up ai-copilot jobs - STATE SYNC 10).
