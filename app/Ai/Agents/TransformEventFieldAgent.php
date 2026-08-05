@@ -1,0 +1,86 @@
+<?php
+
+namespace App\Ai\Agents;
+
+use App\Ai\Prompts\EventCopilotPrompts;
+use Illuminate\Contracts\JsonSchema\JsonSchema;
+use Laravel\Ai\Contracts\Agent;
+use Laravel\Ai\Contracts\HasStructuredOutput;
+use Laravel\Ai\Promptable;
+use Stringable;
+
+class TransformEventFieldAgent implements Agent, HasStructuredOutput
+{
+    use Promptable;
+
+    private string $systemPrompt;
+
+    /**
+     * @param  array<string, mixed>  $eventContext
+     */
+    public function __construct(
+        string $field,
+        string $operation,
+        string $content,
+        ?string $tone,
+        ?string $targetLanguage,
+        array $eventContext,
+    ) {
+        $promptVersion = config('ai-event-copilot.prompt_version');
+        $this->systemPrompt = EventCopilotPrompts::transformField($promptVersion)
+            .$this->buildUserContext($field, $operation, $content, $tone, $targetLanguage, $eventContext);
+    }
+
+    public function instructions(): Stringable|string
+    {
+        return $this->systemPrompt;
+    }
+
+    public function schema(JsonSchema $schema): array
+    {
+        return [
+            'content' => $schema->string()->required(),
+            'language' => $schema->string()->required(),
+            'warnings' => $schema->array()->items($schema->string())->required(),
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $eventContext
+     */
+    private function buildUserContext(
+        string $field,
+        string $operation,
+        string $content,
+        ?string $tone,
+        ?string $targetLanguage,
+        array $eventContext,
+    ): string {
+        $languageNames = ['en' => 'English', 'fr' => 'French', 'ar' => 'Arabic'];
+
+        $message = "\n\n## USER REQUEST\n\n";
+        $message .= "Operation: {$operation}\n";
+        $message .= "Field: {$field}\n";
+
+        if ($tone) {
+            $message .= "Tone: {$tone}\n";
+        }
+
+        if ($targetLanguage) {
+            $languageName = $languageNames[$targetLanguage] ?? $targetLanguage;
+            $message .= "Target language: {$languageName}\n";
+        }
+
+        $contextFields = array_filter($eventContext, fn ($v) => $v !== null);
+        if (! empty($contextFields)) {
+            $message .= "\nEvent context:\n";
+            foreach ($contextFields as $key => $value) {
+                $message .= "- {$key}: {$value}\n";
+            }
+        }
+
+        $message .= "\nCurrent {$field} content:\n\"\"\"\n{$content}\n\"\"\"";
+
+        return $message;
+    }
+}

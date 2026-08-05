@@ -9,10 +9,15 @@
             confirmLabel: '...'
         })"
 
+    For actions that are NOT a form submit, pass an `action` callback instead
+    of `form` (the callback wins when both are present):
+        $dispatch('confirm-ask', { title, message, confirmLabel, action: () => {...} })
+
     The modal lives in the layout (sibling of <main>), so the event bubbles
     up to window where this component picks it up (x-on:confirm-ask.window).
-    "Confirm" calls form.submit() — native submit bypasses the intercepted
-    submit handler, so there is no loop. ESC / backdrop / Cancel close it.
+    "Confirm" runs the `action` callback, or calls form.submit() when no
+    callback is given — native submit bypasses the intercepted submit handler,
+    so there is no loop. ESC / backdrop / Cancel close it.
     ═══════════════════════════════════════════════════════════════════════ --}}
 
 <div x-cloak
@@ -22,6 +27,7 @@
          title = $event.detail.title;
          message = $event.detail.message;
          confirmLabel = $event.detail.confirmLabel || 'Confirm';
+         action = $event.detail.action || null;
          open = true;
      "
      x-on:keydown.escape.window="close()"
@@ -31,14 +37,18 @@
          message: '',
          confirmLabel: 'Confirm',
          form: null,
+         action: null,
          confirm() {
              const f = this.form;
+             const a = this.action;
              this.close();
+             if (typeof a === 'function') { a(); return; }
              if (f) f.submit();
          },
          close() {
              this.open = false;
              this.form = null;
+             this.action = null;
          }
      }"
      style="position:fixed;inset:0;z-index:200;display:flex;align-items:center;justify-content:center;padding:20px">

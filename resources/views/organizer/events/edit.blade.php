@@ -19,6 +19,9 @@
             <h1 style="margin:0;font-size:28px;font-weight:800;letter-spacing:-.9px">Edit event</h1>
             <span style="padding:5px 10px;border-radius:8px;font-size:11px;font-weight:800;text-transform:uppercase;background:{{ $badgeBg }};color:{{ $badgeFg }}">{{ $event->status->label() }}</span>
             <div style="flex:1"></div>
+            @if (config('ai-event-copilot.enabled'))
+                @include('organizer.events.partials.ai-copilot')
+            @endif
             <a href="{{ route('organizer.ticket-types.index', $event) }}" style="border:1px solid var(--border);background:var(--surface);cursor:pointer;font-size:12.5px;font-weight:700;padding:10px 15px;border-radius:10px;min-height:40px;text-decoration:none;color:var(--text);display:inline-flex;align-items:center">Ticket types</a>
         </div>
         <p style="margin:0 0 24px;color:var(--muted);font-size:14.5px">{{ $event->title }}</p>
@@ -41,7 +44,7 @@
             </div>
         @endif
 
-        <form method="POST" action="{{ route('organizer.events.update', $event) }}" style="background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:26px">
+        <form id="event-form" method="POST" action="{{ route('organizer.events.update', $event) }}" style="background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:26px">
             @csrf
             @method('PATCH')
 

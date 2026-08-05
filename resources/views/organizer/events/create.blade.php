@@ -7,7 +7,13 @@
 
     <div style="max-width:960px;margin:0 auto;padding:30px 26px 60px">
         <a href="{{ route('organizer.events.index') }}" style="border:0;background:none;cursor:pointer;font-size:13px;font-weight:700;color:var(--muted);padding:8px 0;margin-bottom:10px;text-decoration:none;display:inline-block">&larr; Back to my events</a>
-        <h1 style="margin:0 0 6px;font-size:28px;font-weight:800;letter-spacing:-.9px">Create an event</h1>
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:6px">
+            <h1 style="margin:0;font-size:28px;font-weight:800;letter-spacing:-.9px">Create an event</h1>
+            <div style="flex:1"></div>
+            @if (config('ai-event-copilot.enabled'))
+                @include('organizer.events.partials.ai-copilot')
+            @endif
+        </div>
         <p style="margin:0 0 24px;color:var(--muted);font-size:14.5px">Submitted events go to an admin for approval before going live.</p>
 
         @if ($errors->any())
@@ -21,7 +27,7 @@
             </div>
         @endif
 
-        <form method="POST" action="{{ route('organizer.events.store') }}" style="background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:26px">
+        <form id="event-form" method="POST" action="{{ route('organizer.events.store') }}" style="background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:26px">
             @csrf
 
             {{-- Basics --}}

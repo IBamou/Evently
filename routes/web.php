@@ -8,6 +8,7 @@ use App\Http\Controllers\Admin\PaymentController as AdminPaymentController;
 use App\Http\Controllers\Admin\TicketController as AdminTicketController;
 use App\Http\Controllers\Organizer\BookingController as OrganizerBookingController;
 use App\Http\Controllers\Organizer\CheckInController;
+use App\Http\Controllers\Organizer\EventAiController;
 use App\Http\Controllers\Organizer\EventController as OrganizerEventController;
 use App\Http\Controllers\Organizer\TicketTypeController;
 use App\Http\Controllers\ProfileController;
@@ -79,6 +80,15 @@ Route::middleware(['auth', 'role:organizer'])->prefix('organizer')->name('organi
 
     // Organizer bookings
     Route::get('events/{event}/bookings', [OrganizerBookingController::class, 'index'])->name('bookings.index');
+
+    // AI Event Copilot
+    Route::prefix('ai')->name('ai.')->group(function () {
+        Route::post('event-drafts', [EventAiController::class, 'generateDraft'])->name('event-drafts');
+        Route::post('event-fields/transform', [EventAiController::class, 'transformField'])->name('event-fields.transform');
+        Route::post('event-marketing', [EventAiController::class, 'generateMarketing'])->name('event-marketing');
+        Route::get('generations/{generation:public_id}', [EventAiController::class, 'status'])->name('generations.status');
+        Route::post('generations/{generation}/feedback', [EventAiController::class, 'recordFeedback'])->name('generations.feedback');
+    });
 });
 
 // ── Check-in (organizer + admin can scan doors; EventPolicy::update covers both) ──

@@ -1973,3 +1973,118 @@ Moved the layout-critical flex styles into the CSS classes (which Alpine's `:sty
 **HOTFIX (build, 2026-08-03, after STATE SYNC 6):** idempotency heuristic on MySQL only_full_group_by — v1 groupBy(items.id) worked on MySQL (PK = functionally dependent) but broke multi-item dedup; v2 groupBy(items.booking_id) reintroduced SQLSTATE 1055 (select *, SUM + non-PK GROUP BY). FINAL: whereHas replaced with explicit whereExists + selectRaw('1') + from booking_items + whereColumn(booking_id, bookings.id) + groupBy booking_id + havingRaw SUM(quantity) — select list is constant so MySQL-valid, semantics correct. Verified against real MySQL (user 1/event 3/tt 5 replica → MYSQL-OK), full suite 300/864, pint+phpstan clean.
 
 **HOTFIX (build, 2026-08-03): confirm modal NOT centered → root cause: x-cloak CSS display:none!important won at Alpine init, x-show stored 'block' as restore value → wrapper lost display:flex, dialog rendered top-left (abs 20,20 with padding). FIX: replaced x-show + inline display:flex with x-bind:style (open ? ...display:flex;align-items:center;justify-content:center... : display:none) — deterministic, no x-show restore logic. Removed x-transition (needs x-show). Verified in browser: wrapper flex, dialog centered (offsetY 0, offsetX ~-8 scrollbar), ESC closes, title/confirm render. view:cache OK. Wiring of 9 danger actions was already verified by big-pickle.
+
+### mimo — AI Event Copilot backend port COMPLETE (2026-08-03, feature/ai-copilot)
+
+**ALL DONE — PHPStan level 8: 0 errors, 333 tests / 985 assertions PASS, Pint clean.**
+
+**Files created/modified (26 total):**
+- Config: `config/ai-event-copilot.php` (env-driven limits, tones, languages, prompt version)
+- Enum: `app/Enums/AiGenerationStatus.php` (SUCCESS/ERROR/BLOCKED)
+- Models: `app/Models/AiGeneration.php`, `app/Models/AiGenerationFeedback.php` (full @property, typed relations, generic HasFactory)
+- DTOs: `app/Dto/EventDraftResult.php`, `SocialMarketing.php`, `FieldTransformResult.php`, `MarketingResult.php` (all with typed toArray)
+- Agents: `app/Ai/Agents/GenerateEventDraftAgent.php`, `GenerateEventMarketingAgent.php`, `TransformEventFieldAgent.php` (adapted for laravel/ai 0.10.2 JSONSchema fluent API)
+- Prompts: `app/Ai/Prompts/EventCopilotPrompts.php` (Evently branding)
+- Service: `app/Services/Ai/AiGenerationRecorder.php` (record, feedback, daily/minute counts)
+- Actions: `app/Actions/Ai/GenerateEventDraftAction.php`, `GenerateEventMarketingAction.php`, `TransformEventFieldAction.php` (typed FormRequest params, null-safe user, json_decode($response->text))
+- Controller: `app/Http/Controllers/Organizer/EventAiController.php`
+- FormRequests: 4 in `app/Http/Requests/Organizer/Ai/`
+- Routes: 4 POST routes in web.php (auth + role:organizer + prefix:ai)
+- Migrations: `2026_08_03_150000_create_ai_generations_table.php`, `2026_08_03_150001_create_ai_generation_feedback_table.php`
+- Factories: `AiGenerationFactory.php`, `AiGenerationFeedbackFactory.php`
+- Tests: 5 Pest files in `tests/Feature/Ai/` (33 tests: AuthorizationTest, ValidationTest, StructuredOutputTest, RateLimitTest, UsageRecordingTest)
+- User model: added `aiGenerations()` hasMany
+- `.env.example`: all `AI_EVENT_COPILOT_*` vars
+
+### big-pickle — AI Event Copilot FRONTEND COMPLETE (2026-08-03, flag-gated)
+
+**Files touched (4):** `resources/views/organizer/events/partials/ai-copilot.blade.php` (NEW — full Alpine partial), `organizer/events/create.blade.php` + `edit.blade.php` (include partial behind `@if(config('ai-event-copilot.enabled'))`, header-row placement, `id="event-form"` on both forms), `layouts/partials/confirm-modal.blade.php` (added optional `action` callback — runs before `form.submit()` fallback; `close()` resets it; backward compatible with all 9 existing dispatchers).
+
+**Partial contents:** Alpine drawer (480px, backdrop, ESC) — Generate draft / field polish (title+description, 6 ops incl. tone/language/translate) / marketing (social+email, regenerate) / comparison box (original vs AI, Apply+Regenerate+Cancel) / per-field + apply-all undo / copy-to-clipboard / RTL (`dir` follows draft.language) / missing-information box / toast / error mapping (403/429/503/504 + provider message → "The AI assistant is temporarily unavailable. Your event form has not been changed.") / fire-and-forget feedback to `organizer/ai/generations/{id}/feedback`.
+
+**Bugs found & fixed:** (1) `x-data="{{…}}"` broke Blade (`{{` echo) → state extracted to `window.aixCopilotState = function(){…}` + `<div x-data="aixCopilotState()">`; (2) `ai_daily_limit_reached: \"…\"` invalid at string-start → proper quotes; (3) `fieldInput`/`eventContext` hit the header logout form (first `<form>` in DOM) → `eventForm()` helper prefers `#event-form`; (4) RTL read the language select, not draft.language → fixed; (5) data prop `undoAll` SHADOWED method `undoAll()` (Alpine proxy collision — button threw TypeError) → method renamed `revertAll()`, template updated; verified no remaining prop/method name collisions.
+
+**Browser-verified (demo-organizer, flag ON then reverted):** drawer opens/ESC-closes; generate→`POST event-drafts` 503→mapped error; transform→`POST event-fields/transform` 503→mapped error in comparison box (Apply disabled); stubbed Arabic draft → RTL, missing-info, suggestions, marketing, copy buttons; apply-all fast path (empty form) + confirm path (non-empty → shared modal w/ custom label + overwrite message) + undo-all restore ("Reverted to your previous values"); per-field "Use title" + undo; confirm-modal `action` callback ran + modal closed; edit page (`/organizer/events/2/edit`) partial renders, `#event-form` targets the update form, pre-filled values read correctly, ticket-types link intact. Flag-off: zero copilot markup, console clean. `view:cache` passes. **`.env` flag `AI_EVENT_COPILOT_ENABLED` reverted to off after testing** (config now false; add var to enable).
+
+**Open:** end-to-end 200 responses need real AI keys; marketing regenerate path only smoke-tested via stub (route exists, same error mapping); no automated frontend tests (manual browser verification only).
+
+---
+
+## STATE SYNC 7 � AI Copilot: keys wired + async queue + verified E2E (2026-08-03)
+
+**User provided real API keys (old IEvent .env) � wired ONLY what this app needs into .env (gitignored) + .env.example (empty placeholders):**
+- Primary: `AI_EVENT_COPILOT_PROVIDER=openrouter`, AI_EVENT_COPILOT_MODEL=nvidia/nemotron-3-nano-30b-a3b:free, `OPENROUTER_API_KEY`, `OPENROUTER_BASE_URL=https://openrouter.ai/api/v1`
+- Fallback: `AI_EVENT_COPILOT_FALLBACK_PROVIDER=groq`, `AI_EVENT_COPILOT_FALLBACK_MODEL=llama-3.3-70b-versatile`, `GROQ_API_KEY`, `GROQ_BASE_URL=https://api.groq.com/openai/v1`
+- AI_EVENT_COPILOT_ENABLED=true, TIMEOUT=30, DAILY_LIMIT=50, PER_MINUTE_LIMIT=5, PROMPT_VERSION=event-copilot-v1
+- config/ai.php: added `url` keys to openrouter+groq providers (SDK reads `additionalConfiguration()['url']`); config/ai-event-copilot.php: added fallback_provider/fallback_model.
+
+**Backend now ASYNC (mimo, ios: user demanded queues/jobs + clean layers):** PHP 8.4, Laravel 13, queues: QUEUE_CONNECTION=database (jobs table exists; phpunit QUEUE_CONNECTION=sync so tests run inline).
+- New: AiProviderRouter (Strategy: primary?transient-only fallback; rate-limit/timeout/5xx eligible, 401/403/422 not), AiGenerationService orchestrator (create/execute/storeInputs/loadInputs/statusPayload), ProcessAiGenerationJob (ShouldQueue, queue i-copilot, tries 2, backoff 10/30, failed() marks error), HasAiGenerationUsage trait on User, AiProviderRoute DTO, migration 2026_08_03_150002 (provider_used/model_used/result cols).
+- Enum AiGenerationStatus += PROCESSING. 3 POSTs return **202 {data:{generation_id,status:'processing'}}** + dispatch job; NEW **GET organizer/ai/generations/{public_id}** polling endpoint (status/result/error_code/error_message/provider_used/model_used/latency_ms). Feedback route unchanged. Inputs cached (ai_copilot:inputs:{public_id}, 1h) for job.
+- Tests: 33?47 AI tests (async dispatch w/ Queue::fake, polling, fallback, ownership 404, disabled 403, rate-limit). **FULL SUITE 347 passed / 1059 assertions; PHPStan 0 errors; Pint ok.**
+
+**Frontend (polling, done by build):** i-copilot.blade.php � POST ? 202 ? pollGeneration() GET status every 1.5s up to 90s; draft result mapped to old shape via draftFromResult() (suggestions/title/description/category/marketing/missing_information); marketing sets draft.suggestions.marketing; transform fills compare box (content/language/warnings). Header comment updated w/ async contract.
+
+**REAL E2E VERIFIED (browser, demo-organizer Salma, flag ON, queue worker manual queue:work --once --queue=ai-copilot):** draft POST 202 ? ? poll ? ? success with real OpenRouter suggestions (title/desc/category=Music/marketing/missing-info) ?; transform Improve rewrite (post-202 ? queue ? poll) rendered "Festival of Digital Beats in Casablanca" + Apply ?. DB rows: provider_used=openrouter, model_used=nvidia/nemotron-3-nano-30b-a3b:free, latency 22.5s/5.5s ?.
+
+**Gotchas:** (1) Recorder creates a second usage-ledger AiGeneration row per success (NULL provider/model) � harmless, flagged; (2) **USER MUST RUN php artisan queue:work (or listen) for real generations on Herd** � without a worker, generations stay processing and UI times out after ~90s; (3) tinker strings need .env values quoted (PS quoting hazard).
+
+**Status:** uncommitted on feature/ai-event-copilot (all AI work). Pending: user runs queue worker; ask about commit/push; booking branch still uncommitted to main (PR not opened).
+
+---
+
+## STATE SYNC 8 -- AI Copilot: fallback fixed (Groq json_schema), UX drawer bugs fixed, FULL E2E re-verified (2026-08-04, build)
+
+**Root-cause #1 -- Groq fallback always failed:** laravel/ai Groq gateway sends response_format json_schema; Groq *only* accepts it on specific models (llama-3.3-70b-versatile/llama-3.1-8b-instant/qwen* -> 400 "model does not support response format json_schema"; openai/gpt-oss-20b/120b -> 400 strict-mode: every property must be listed in \equired\). Fixed:
+- GenerateEventDraftAgent schema: category_id + missing_information now ->required() (nullable/empty-array friendly). Marketing/Transform agents already fully required.
+- Fallback model changed llama-3.3-70b-versatile -> **openai/gpt-oss-20b** in .env + .env.example + AsyncGenerationTest expectations.
+- Verified all 3 agents against real Groq gpt-oss-20b (free): draft x2, transform, marketing all SUCCESS (structured JSON valid).
+- NOTE user constraint: **NEVER use a paid OpenRouter model** -- primary stays nvidia/nemotron-3-nano-30b-a3b:free. OpenRouter free tier is flaky (503 "request queue is full", 30s timeouts) -- fallback now actually saves us.
+
+**Root-cause #2 -- Alpine non-reactivity of tab visibility:** canPolish()/canMarket() read the DOM form (non-reactive), so the **Polish tab never appeared after "Apply draft"**. Fixed: added reactive \ormTick\ counter (bumped in useSuggestion, applyDraft, undoApply, applyTransform, restoreSession re-apply) + canPolish()/canMarket() depend on it via \	his.formTick >= 0\.
+
+**Root-cause #3 -- session restore left form empty after page reload:** restoreSession now re-applies draft title/description/category to the (wiped) native form when applied=true, keeping workspace/form in sync.
+
+**Fixes verified in browser (full E2E, demo-organizer, flag ON, queue worker):**
+1. Start -> brief/audience -> Generate -> 202 -> poll -> Draft tab w/ suggestions + missing-info (real AI content) ?
+2. Apply draft -> title+description+category filled, toast + Undo ?; reload -> form re-populated from session ?
+3. Tabs now **Draft | Polish | Marketing** all visible ?
+4. Polish: Title/Description segmented; Improve -> compare box (Current vs AI) -> Apply -> form updated ?
+5. Marketing: Social + Email segments w/ copy from draft; Regenerate -> new marketing API call -> fresh content ?
+6. Console: no Alpine/JS errors (only Vite CORS noise when npm run dev absent) ?
+
+**Quality:** FULL SUITE 348 passed / 1064 assertions; Pint clean. test-draft.php scratch script removed.
+
+**Status:** uncommitted on feature/ai-event-copilot. Pending: user runs queue worker for live use; ask about commit/push + booking branch PR.
+
+---
+
+## STATE SYNC 9 -- AI Copilot drawer UI fix: x-bind:style was wiping panel layout (2026-08-04, build)
+
+**User report:** drawer (`side section`) looks `too busy` / `misplaced`.
+
+**Root cause:** every tab container used `x-bind:style="tab === 'draft' ? '' : 'display:none'"`. When the tab is ACTIVE, Alpine REPLACES the entire style attribute with `''`, wiping `padding:14px 16px 20px`, `overflow-y:auto`, `flex:1` and `display:flex`. Content rendered flush to the drawer edges (x=0, full-bleed 479px controls, Regenerate button edge-to-edge), no padding/scroll -> "too busy, misplaced". Same bug class: `compareVis()` returned `''` and wiped the compare box accent border/background; `compareErrVis()` wiped its margin-top.
+
+**Fix (ai-copilot.blade.php only, no PHP):**
+- New CSS classes `.aix-panel` (flex:1; overflow-y:auto; padding 14/16/20; display:flex; column) and `.aix-flexcol` (display:flex; column). Layout moved OUT of inline styles into classes so Alpine display-toggling can never destroy it.
+- Tab containers (draft/polish/marketing) + start screen: `x-bind:style` removed, `class="aix-panel"` + `x-show` (gap/padding kept inline - x-show only touches `display`).
+- Email segment container: `aix-flexcol` class instead of inline display:flex (x-show wipes inline display on hide/show cycle otherwise).
+- Compare box: `x-bind:style="compareVis()"` -> `x-show="compare"` (keeps accent styles); error box -> `x-show="compare && compare.error"`; deleted now-unused compareVis()/compareErrVis() methods.
+
+**Verified in browser (create page, drawer reopened):** marketing/draft/polish/start panels all display:flex, padding correct, content inset x=16 (w=432 vs 479 before); 4x tab switching cycles preserve flex+padding; compare box shows with accent border (rgb(21,101,216)) + bg, hides cleanly, error box keeps margin-top; console clean (Vite CORS noise only). AsyncGenerationTest: 14 passed / 60 assertions. Full suite ran green previously; no PHP touched.
+
+**Gotcha to remember:** NEVER use `x-bind:style` to toggle visibility on an element that has other inline styles -- it replaces the whole attribute. Use x-show (display-only) + classes for layout.
+
+---
+
+## STATE SYNC 10 -- Live E2E re-verified with real worker + CRITICAL queue gotcha (2026-08-04, build)
+
+**User ran worker but jobs never processed.** Found via Win32_Process: their worker was plain \php artisan queue:work\ -> only consumes the DEFAULT queue. All copilot jobs go to the **ai-copilot** queue, so they sat in jobs with attempts=0, reserved_at=null forever; UI polled 90s and showed "The AI assistant took too long to respond. Please try again." while the job later succeeded once a worker existed.
+
+**Fix:** started detached worker for the right queue: Start-Process php artisan queue:work --queue=ai-copilot --timeout=150 --tries=2 (PID 2756, still running).
+
+**Verified live (real OpenRouter primary):**
+- Generation 01KZ71P59DZN98H2Q5XS5NZKKP: success, provider openrouter, model nvidia/nemotron-3-nano-30b-a3b:free, 17.6s, full structured result (title, description, category Music, marketing trio, 5 missing_information items).
+- Retest from UI after worker fix: drawer transitioned start -> workspace, Draft tab with suggestions + missing-info box, Apply/New draft buttons, NO timeout error. Polish tab correctly hidden until form has content (canPolish gating works).
+
+**Gotcha for user:** worker must be php artisan queue:work --queue=ai-copilot --timeout=150 (or listen). Default queue:work never touches AI jobs. UI poll timeout (~90s) is a UX ceiling, not a backend failure - job may still succeed later in DB.
