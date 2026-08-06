@@ -80,11 +80,19 @@ class BookingController extends Controller
             $booking = $service->create($user, $validated);
 
             // Mock payment: if paid event with valid card submitted, confirm immediately.
+            // Only when the mock confirmation gate is enabled (config/payments.php).
             $total = (float) $booking->total;
             $cardNumber = $validated['payment']['card_number'] ?? null;
             $hasPayment = $cardNumber !== null && $cardNumber !== '';
 
             if ($total > 0 && $hasPayment) {
+                if (! config('payments.mock_confirm')) {
+                    // Real payment integration is not wired up: the booking
+                    // stays pending rather than being falsely confirmed.
+                    return redirect()->route('bookings.show', $booking)
+                        ->with('info', 'Booking created. Payment confirmation is not available in this environment; your booking is pending.');
+                }
+
                 // Card format + business rules already validated by StoreBookingRequest.
                 // Confirm payment: update status → Confirmed, payment → Succeeded, issue tickets.
                 $service->confirmPayment($booking);
@@ -180,6 +188,10 @@ class BookingController extends Controller
 
     /**
      * Confirm payment for a pending booking (mock).
+     *
+     * Only reachable while the mock confirmation gate is enabled
+     * (config/payments.php). Once a real provider is integrated, this
+     * endpoint must be replaced by a provider callback.
      */
     public function confirmPayment(Booking $booking, BookingService $service): RedirectResponse
     {
@@ -187,6 +199,10 @@ class BookingController extends Controller
 
         if ($booking->user_id !== Auth::id()) {
             abort(403);
+        }
+
+        if (! config('payments.mock_confirm')) {
+            abort(403, 'Mock payment confirmation is disabled.');
         }
 
         try {

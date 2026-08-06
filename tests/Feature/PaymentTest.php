@@ -146,3 +146,103 @@ test('free booking instant confirm creates tickets', function () {
         $this->assertEquals(TicketStatus::Valid, $ticket->status);
     }
 });
+
+test('money math is rounded to cents, not float residue', function () {
+    $oddType = TicketType::create([
+        'event_id' => $this->event->id,
+        'name' => 'Odd price',
+        'price' => 12.34,
+        'quantity' => 50,
+        'min_per_booking' => 1,
+        'max_per_booking' => 10,
+        'currency' => 'MAD',
+        'is_active' => true,
+        'sales_start_at' => now()->subDay(),
+        'sales_end_at' => now()->addMonth(),
+    ]);
+
+    $this->actingAs($this->user)->post(route('bookings.store'), [
+        'event_id' => $this->event->id,
+        'items' => [['ticket_type_id' => $oddType->id, 'quantity' => 3]],
+    ]);
+
+    $booking = Booking::where('event_id', $this->event->id)->first();
+
+    // 12.34 * 3 = 37.02 — the float product (37.020000000000003) must be
+    // rounded before persisting, otherwise the stored value carries residue.
+    $this->assertDatabaseHas('booking_items', [
+        'booking_id' => $booking->id,
+        'line_total' => 37.02,
+    ]);
+
+    $this->assertSame(37.02, (float) $booking->subtotal);
+    $this->assertSame(37.02, (float) $booking->total);
+
+    $this->assertDatabaseHas('payments', [
+        'booking_id' => $booking->id,
+        'amount' => 37.02,
+    ]);
+});
+
+test('mock payment gate blocks manual confirmation when disabled', function () {
+    config()->set('payments.mock_confirm', false);
+
+    $this->actingAs($this->user)->post(route('bookings.store'), [
+        'event_id' => $this->event->id,
+        'items' => [['ticket_type_id' => $this->paidType->id, 'quantity' => 1]],
+    ]);
+
+    $booking = Booking::where('event_id', $this->event->id)->first();
+
+    $this->actingAs($this->user)
+        ->post(route('bookings.confirm-payment', $booking))
+        ->assertForbidden();
+
+    expect($booking->fresh()->status)->toBe(BookingStatus::Pending);
+});
+
+test('mock payment gate blocks auto-confirm on checkout when disabled', function () {
+    config()->set('payments.mock_confirm', false);
+
+    $response = $this->actingAs($this->user)->post(route('bookings.store'), [
+        'event_id' => $this->event->id,
+        'items' => [['ticket_type_id' => $this->paidType->id, 'quantity' => 1]],
+        'payment' => [
+            'card_number' => '4242424242424242',
+            'expiry' => '12/30',
+            'cvc' => '123',
+        ],
+    ]);
+
+    $response->assertRedirect();
+    $response->assertSessionHas('info');
+
+    $booking = Booking::where('event_id', $this->event->id)->first();
+    expect($booking->status)->toBe(BookingStatus::Pending);
+
+    $this->assertDatabaseHas('payments', [
+        'booking_id' => $booking->id,
+        'status' => PaymentStatus::Pending->value,
+    ]);
+});
+
+test('show page badges pending bookings as mock payment mode', function () {
+    $this->actingAs($this->user)->post(route('bookings.store'), [
+        'event_id' => $this->event->id,
+        'items' => [['ticket_type_id' => $this->paidType->id, 'quantity' => 1]],
+    ]);
+
+    $booking = Booking::where('event_id', $this->event->id)->first();
+
+    $this->actingAs($this->user)
+        ->get(route('bookings.show', $booking))
+        ->assertOk()
+        ->assertSee('Mock payment mode');
+
+    config()->set('payments.mock_confirm', false);
+
+    $this->actingAs($this->user)
+        ->get(route('bookings.show', $booking))
+        ->assertOk()
+        ->assertDontSee('Mock payment mode');
+});

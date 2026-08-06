@@ -111,6 +111,11 @@
                     </div>
 
                     @if($canPay)
+                        @if(config('payments.mock_confirm'))
+                            <div style="margin-bottom:10px;padding:9px 12px;border:1px dashed var(--border);border-radius:10px;background:rgba(255,193,7,.06);font-size:11.5px;line-height:1.5;color:var(--muted)">
+                                <strong style="text-transform:uppercase;letter-spacing:.5px">Mock payment mode</strong> — confirmation is simulated, no real charge occurs.
+                            </div>
+                        @endif
                         <form action="{{ route('bookings.confirm-payment', $booking) }}" method="POST">
                             @csrf
                             <button type="submit" style="width:100%;height:46px;border:0;border-radius:12px;background:linear-gradient(135deg,var(--primary),var(--primary-dark,#0b2545));color:#fff;font-size:14px;font-weight:700;cursor:pointer">Confirm Payment</button>
