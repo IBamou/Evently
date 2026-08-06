@@ -68,15 +68,15 @@ Route::middleware(['auth', 'role:organizer'])->prefix('organizer')->name('organi
     Route::post('events/{event}/cancel', [OrganizerEventController::class, 'cancel'])->name('events.cancel');
     Route::post('events/{event}/submit', [OrganizerEventController::class, 'submit'])->name('events.submit');
 
-    // Ticket types
+    // Ticket types (scopeBindings ensures ticketType must belong to the event in the URL)
     Route::get('events/{event}/ticket-types', [TicketTypeController::class, 'index'])->name('ticket-types.index');
     Route::get('events/{event}/ticket-types/create', [TicketTypeController::class, 'create'])->name('ticket-types.create');
     Route::post('events/{event}/ticket-types', [TicketTypeController::class, 'store'])->name('ticket-types.store');
-    Route::get('events/{event}/ticket-types/{ticketType}/edit', [TicketTypeController::class, 'edit'])->name('ticket-types.edit');
-    Route::put('events/{event}/ticket-types/{ticketType}', [TicketTypeController::class, 'update'])->name('ticket-types.update');
-    Route::delete('events/{event}/ticket-types/{ticketType}', [TicketTypeController::class, 'destroy'])->name('ticket-types.destroy');
-    Route::post('events/{event}/ticket-types/{ticketType}/activate', [TicketTypeController::class, 'activate'])->name('ticket-types.activate');
-    Route::post('events/{event}/ticket-types/{ticketType}/deactivate', [TicketTypeController::class, 'deactivate'])->name('ticket-types.deactivate');
+    Route::get('events/{event}/ticket-types/{ticketType}/edit', [TicketTypeController::class, 'edit'])->name('ticket-types.edit')->scopeBindings();
+    Route::put('events/{event}/ticket-types/{ticketType}', [TicketTypeController::class, 'update'])->name('ticket-types.update')->scopeBindings();
+    Route::delete('events/{event}/ticket-types/{ticketType}', [TicketTypeController::class, 'destroy'])->name('ticket-types.destroy')->scopeBindings();
+    Route::post('events/{event}/ticket-types/{ticketType}/activate', [TicketTypeController::class, 'activate'])->name('ticket-types.activate')->scopeBindings();
+    Route::post('events/{event}/ticket-types/{ticketType}/deactivate', [TicketTypeController::class, 'deactivate'])->name('ticket-types.deactivate')->scopeBindings();
 
     // Organizer bookings
     Route::get('events/{event}/bookings', [OrganizerBookingController::class, 'index'])->name('bookings.index');

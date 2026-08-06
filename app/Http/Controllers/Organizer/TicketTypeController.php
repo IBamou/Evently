@@ -67,6 +67,7 @@ class TicketTypeController extends Controller
     public function edit(Event $event, TicketType $ticketType): View
     {
         $this->authorize('update', $event);
+        $this->ensureOwnership($event, $ticketType);
 
         return view('organizer.ticket-types.edit', compact('event', 'ticketType'));
     }
@@ -77,6 +78,7 @@ class TicketTypeController extends Controller
     public function update(UpdateTicketTypeRequest $request, Event $event, TicketType $ticketType): RedirectResponse
     {
         $this->authorize('update', $event);
+        $this->ensureOwnership($event, $ticketType);
 
         $ticketType->update($request->validated());
 
@@ -90,6 +92,7 @@ class TicketTypeController extends Controller
     public function destroy(Event $event, TicketType $ticketType): RedirectResponse
     {
         $this->authorize('update', $event);
+        $this->ensureOwnership($event, $ticketType);
 
         if ($ticketType->bookingItems()->exists()) {
             return redirect()->back()
@@ -108,6 +111,7 @@ class TicketTypeController extends Controller
     public function activate(Event $event, TicketType $ticketType): RedirectResponse
     {
         $this->authorize('update', $event);
+        $this->ensureOwnership($event, $ticketType);
 
         $ticketType->update(['is_active' => true]);
 
@@ -121,10 +125,19 @@ class TicketTypeController extends Controller
     public function deactivate(Event $event, TicketType $ticketType): RedirectResponse
     {
         $this->authorize('update', $event);
+        $this->ensureOwnership($event, $ticketType);
 
         $ticketType->update(['is_active' => false]);
 
         return redirect()->route('organizer.ticket-types.index', $event)
             ->with('success', 'Ticket type deactivated.');
+    }
+
+    /**
+     * Defense-in-depth: ensure the ticket type belongs to the given event.
+     */
+    private function ensureOwnership(Event $event, TicketType $ticketType): void
+    {
+        abort_unless($ticketType->event_id === $event->id, 404);
     }
 }

@@ -257,3 +257,305 @@ test('organizer cannot create for other event', function () {
 
     $response->assertStatus(403);
 });
+
+// ── Nested ticket-type authorization tests ──
+
+test('same organizer + correct event/ticketType = allowed for edit', function () {
+    $this->actingAs($this->organizer);
+
+    $tt = TicketType::create([
+        'event_id' => $this->event->id,
+        'name' => 'Edit Me',
+        'price' => 100,
+        'quantity' => 100,
+        'min_per_booking' => 1,
+        'max_per_booking' => 10,
+        'currency' => 'MAD',
+    ]);
+
+    $response = $this->get(route('organizer.ticket-types.edit', [$this->event, $tt]));
+    $response->assertOk();
+});
+
+test('same organizer + correct event/ticketType = allowed for update', function () {
+    $this->actingAs($this->organizer);
+
+    $tt = TicketType::create([
+        'event_id' => $this->event->id,
+        'name' => 'Update Me',
+        'price' => 100,
+        'quantity' => 100,
+        'min_per_booking' => 1,
+        'max_per_booking' => 10,
+        'currency' => 'MAD',
+    ]);
+
+    $response = $this->put(route('organizer.ticket-types.update', [$this->event, $tt]), [
+        'name' => 'Updated Name',
+        'price' => 150,
+        'quantity' => 200,
+        'min_per_booking' => 1,
+        'max_per_booking' => 10,
+    ]);
+
+    $response->assertRedirect();
+    $this->assertDatabaseHas('ticket_types', ['id' => $tt->id, 'name' => 'Updated Name']);
+});
+
+test('same organizer + correct event/ticketType = allowed for activate', function () {
+    $this->actingAs($this->organizer);
+
+    $tt = TicketType::create([
+        'event_id' => $this->event->id,
+        'name' => 'Activator',
+        'price' => 100,
+        'quantity' => 100,
+        'min_per_booking' => 1,
+        'max_per_booking' => 10,
+        'currency' => 'MAD',
+        'is_active' => false,
+    ]);
+
+    $response = $this->post(route('organizer.ticket-types.activate', [$this->event, $tt]));
+    $response->assertRedirect();
+    $this->assertDatabaseHas('ticket_types', ['id' => $tt->id, 'is_active' => true]);
+});
+
+test('same organizer + correct event/ticketType = allowed for deactivate', function () {
+    $this->actingAs($this->organizer);
+
+    $tt = TicketType::create([
+        'event_id' => $this->event->id,
+        'name' => 'Deactivator',
+        'price' => 100,
+        'quantity' => 100,
+        'min_per_booking' => 1,
+        'max_per_booking' => 10,
+        'currency' => 'MAD',
+        'is_active' => true,
+    ]);
+
+    $response = $this->post(route('organizer.ticket-types.deactivate', [$this->event, $tt]));
+    $response->assertRedirect();
+    $this->assertDatabaseHas('ticket_types', ['id' => $tt->id, 'is_active' => false]);
+});
+
+test('same organizer + correct event/ticketType = allowed for destroy', function () {
+    $this->actingAs($this->organizer);
+
+    $tt = TicketType::create([
+        'event_id' => $this->event->id,
+        'name' => 'Delete Me',
+        'price' => 100,
+        'quantity' => 100,
+        'min_per_booking' => 1,
+        'max_per_booking' => 10,
+        'currency' => 'MAD',
+    ]);
+
+    $response = $this->delete(route('organizer.ticket-types.destroy', [$this->event, $tt]));
+    $response->assertRedirect();
+    $this->assertSoftDeleted('ticket_types', ['id' => $tt->id]);
+});
+
+test('ticketType of another event by same organizer = 404 (edit)', function () {
+    $this->actingAs($this->organizer);
+
+    $otherEvent = Event::factory()->published()->create(['organizer_id' => $this->organizer->id]);
+    $tt = TicketType::create([
+        'event_id' => $otherEvent->id,
+        'name' => 'Wrong Event',
+        'price' => 100,
+        'quantity' => 100,
+        'min_per_booking' => 1,
+        'max_per_booking' => 10,
+        'currency' => 'MAD',
+    ]);
+
+    // Try to access this ticketType via THIS event's URL (wrong event)
+    $response = $this->get(route('organizer.ticket-types.edit', [$this->event, $tt]));
+    $response->assertNotFound();
+});
+
+test('ticketType of another event by same organizer = 404 (update)', function () {
+    $this->actingAs($this->organizer);
+
+    $otherEvent = Event::factory()->published()->create(['organizer_id' => $this->organizer->id]);
+    $tt = TicketType::create([
+        'event_id' => $otherEvent->id,
+        'name' => 'Wrong Event',
+        'price' => 100,
+        'quantity' => 100,
+        'min_per_booking' => 1,
+        'max_per_booking' => 10,
+        'currency' => 'MAD',
+    ]);
+
+    $response = $this->put(route('organizer.ticket-types.update', [$this->event, $tt]), [
+        'name' => 'Hacked',
+        'price' => 150,
+        'quantity' => 200,
+        'min_per_booking' => 1,
+        'max_per_booking' => 10,
+    ]);
+    $response->assertNotFound();
+});
+
+test('ticketType of another event by same organizer = 404 (delete)', function () {
+    $this->actingAs($this->organizer);
+
+    $otherEvent = Event::factory()->published()->create(['organizer_id' => $this->organizer->id]);
+    $tt = TicketType::create([
+        'event_id' => $otherEvent->id,
+        'name' => 'Wrong Event',
+        'price' => 100,
+        'quantity' => 100,
+        'min_per_booking' => 1,
+        'max_per_booking' => 10,
+        'currency' => 'MAD',
+    ]);
+
+    $response = $this->delete(route('organizer.ticket-types.destroy', [$this->event, $tt]));
+    $response->assertNotFound();
+});
+
+test('ticketType of another event by same organizer = 404 (activate)', function () {
+    $this->actingAs($this->organizer);
+
+    $otherEvent = Event::factory()->published()->create(['organizer_id' => $this->organizer->id]);
+    $tt = TicketType::create([
+        'event_id' => $otherEvent->id,
+        'name' => 'Wrong Event',
+        'price' => 100,
+        'quantity' => 100,
+        'min_per_booking' => 1,
+        'max_per_booking' => 10,
+        'currency' => 'MAD',
+        'is_active' => false,
+    ]);
+
+    $response = $this->post(route('organizer.ticket-types.activate', [$this->event, $tt]));
+    $response->assertNotFound();
+});
+
+test('ticketType of another event by same organizer = 404 (deactivate)', function () {
+    $this->actingAs($this->organizer);
+
+    $otherEvent = Event::factory()->published()->create(['organizer_id' => $this->organizer->id]);
+    $tt = TicketType::create([
+        'event_id' => $otherEvent->id,
+        'name' => 'Wrong Event',
+        'price' => 100,
+        'quantity' => 100,
+        'min_per_booking' => 1,
+        'max_per_booking' => 10,
+        'currency' => 'MAD',
+        'is_active' => true,
+    ]);
+
+    $response = $this->post(route('organizer.ticket-types.deactivate', [$this->event, $tt]));
+    $response->assertNotFound();
+});
+
+test('organizer A + event A + ticketType of organizer B = 404 (edit)', function () {
+    $this->actingAs($this->organizer);
+
+    $organizerB = User::factory()->asOrganizer()->create();
+    $eventB = Event::factory()->published()->create(['organizer_id' => $organizerB->id]);
+    $tt = TicketType::create([
+        'event_id' => $eventB->id,
+        'name' => 'Other Org',
+        'price' => 100,
+        'quantity' => 100,
+        'min_per_booking' => 1,
+        'max_per_booking' => 10,
+        'currency' => 'MAD',
+    ]);
+
+    $response = $this->get(route('organizer.ticket-types.edit', [$this->event, $tt]));
+    $response->assertNotFound();
+});
+
+test('organizer A + event A + ticketType of organizer B = 404 (update)', function () {
+    $this->actingAs($this->organizer);
+
+    $organizerB = User::factory()->asOrganizer()->create();
+    $eventB = Event::factory()->published()->create(['organizer_id' => $organizerB->id]);
+    $tt = TicketType::create([
+        'event_id' => $eventB->id,
+        'name' => 'Other Org',
+        'price' => 100,
+        'quantity' => 100,
+        'min_per_booking' => 1,
+        'max_per_booking' => 10,
+        'currency' => 'MAD',
+    ]);
+
+    $response = $this->put(route('organizer.ticket-types.update', [$this->event, $tt]), [
+        'name' => 'Hacked',
+        'price' => 150,
+        'quantity' => 200,
+        'min_per_booking' => 1,
+        'max_per_booking' => 10,
+    ]);
+    $response->assertNotFound();
+});
+
+test('organizer A + event A + ticketType of organizer B = 404 (delete)', function () {
+    $this->actingAs($this->organizer);
+
+    $organizerB = User::factory()->asOrganizer()->create();
+    $eventB = Event::factory()->published()->create(['organizer_id' => $organizerB->id]);
+    $tt = TicketType::create([
+        'event_id' => $eventB->id,
+        'name' => 'Other Org',
+        'price' => 100,
+        'quantity' => 100,
+        'min_per_booking' => 1,
+        'max_per_booking' => 10,
+        'currency' => 'MAD',
+    ]);
+
+    $response = $this->delete(route('organizer.ticket-types.destroy', [$this->event, $tt]));
+    $response->assertNotFound();
+});
+
+test('organizer A + event A + ticketType of organizer B = 404 (activate)', function () {
+    $this->actingAs($this->organizer);
+
+    $organizerB = User::factory()->asOrganizer()->create();
+    $eventB = Event::factory()->published()->create(['organizer_id' => $organizerB->id]);
+    $tt = TicketType::create([
+        'event_id' => $eventB->id,
+        'name' => 'Other Org',
+        'price' => 100,
+        'quantity' => 100,
+        'min_per_booking' => 1,
+        'max_per_booking' => 10,
+        'currency' => 'MAD',
+        'is_active' => false,
+    ]);
+
+    $response = $this->post(route('organizer.ticket-types.activate', [$this->event, $tt]));
+    $response->assertNotFound();
+});
+
+test('organizer A + event A + ticketType of organizer B = 404 (deactivate)', function () {
+    $this->actingAs($this->organizer);
+
+    $organizerB = User::factory()->asOrganizer()->create();
+    $eventB = Event::factory()->published()->create(['organizer_id' => $organizerB->id]);
+    $tt = TicketType::create([
+        'event_id' => $eventB->id,
+        'name' => 'Other Org',
+        'price' => 100,
+        'quantity' => 100,
+        'min_per_booking' => 1,
+        'max_per_booking' => 10,
+        'currency' => 'MAD',
+        'is_active' => true,
+    ]);
+
+    $response = $this->post(route('organizer.ticket-types.deactivate', [$this->event, $tt]));
+    $response->assertNotFound();
+});

@@ -26,19 +26,45 @@ class StoreTicketTypeRequest extends FormRequest
             'description' => ['nullable', 'string', 'max:1000'],
             'price' => ['required', 'numeric', 'min:0'],
             'quantity' => ['required', 'integer', 'min:1'],
-            'min_per_booking' => ['required', 'integer', 'min:1'],
+            'min_per_booking' => [
+                'required',
+                'integer',
+                'min:1',
+                function ($attribute, $value, $fail): void {
+                    $maxPerBooking = $this->input('max_per_booking', $this->input('quantity'));
+                    if ($value > $maxPerBooking) {
+                        $fail('Min per booking must be less than or equal to max per booking.');
+                    }
+                    $quantity = $this->input('quantity');
+                    if ($quantity !== null && $value > $quantity) {
+                        $fail('Min per booking must be less than or equal to quantity.');
+                    }
+                },
+            ],
             'max_per_booking' => [
                 'required',
                 'integer',
                 'min:1',
-                'lte:quantity',
+                function ($attribute, $value, $fail): void {
+                    $minPerBooking = $this->input('min_per_booking');
+                    if ($minPerBooking !== null && $value < $minPerBooking) {
+                        $fail('Max per booking must be greater than or equal to min per booking.');
+                    }
+                    $quantity = $this->input('quantity');
+                    if ($quantity !== null && $value > $quantity) {
+                        $fail('Max per booking must be less than or equal to quantity.');
+                    }
+                },
             ],
             'sales_start_at' => ['nullable', 'date'],
             'sales_end_at' => [
                 'nullable',
                 'date',
-                'after:sales_start_at',
-                function ($attribute, $value, $fail) use ($routeEvent) {
+                function ($attribute, $value, $fail) use ($routeEvent): void {
+                    $salesStartAt = $this->input('sales_start_at');
+                    if ($value && $salesStartAt && Carbon::parse($value)->lte(Carbon::parse($salesStartAt))) {
+                        $fail('Sales end date must be after sales start date.');
+                    }
                     if ($routeEvent instanceof Event && $value && $routeEvent->starts_at && Carbon::parse($value)->gte($routeEvent->starts_at)) {
                         $fail('Sales end date must be before the event start date.');
                     }
