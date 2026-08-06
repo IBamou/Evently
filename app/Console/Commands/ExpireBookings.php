@@ -26,6 +26,16 @@ class ExpireBookings extends Command
 
     /**
      * Execute the console command.
+     *
+     * Serialization with BookingService::confirmPayment(): both sides lock the
+     * same authoritative booking rows (FOR UPDATE) before deciding state, so a
+     * booking can never be both expired and confirmed. If confirmation gets
+     * the lock first, the booking is confirmed (expires_at = NULL) and drops
+     * out of the guarded re-check below; if expiration gets the lock first,
+     * the booking becomes expired and confirmPayment() rejects it with 409.
+     *
+     * The reported count is the number of rows that truly transitioned to
+     * expired — the UPDATE's affected-row count — never the candidate count.
      */
     public function handle(): int
     {
@@ -34,32 +44,52 @@ class ExpireBookings extends Command
         DB::table('bookings')
             ->where('status', BookingStatus::Pending->value)
             ->where('expires_at', '<', now())
-            ->chunkById(500, function ($bookings) use (&$count) {
-                $candidateIds = $bookings->pluck('id');
-
-                DB::transaction(function () use ($candidateIds) {
-                    // Authoritative expiry: only rows still pending AND still
-                    // past their window are expired. A booking confirmed after
-                    // the chunk read has status=confirmed and expires_at=NULL,
-                    // so the guarded UPDATE never clobbers it — this closes the
-                    // read-then-write race with confirmPayment (REQ-CN-010).
-                    $expiredIds = DB::table('bookings')
-                        ->whereIn('id', $candidateIds)
+            ->orderBy('id')
+            ->chunkById(500, function ($candidates) use (&$count) {
+                DB::transaction(function () use ($candidates, &$count) {
+                    // Lock the candidate rows FOR UPDATE, then re-check both
+                    // guards (still pending, window still closed) under the
+                    // lock. A booking confirmed between the chunk read and
+                    // this transaction holds status=confirmed + expires_at=NULL,
+                    // so it drops out here and is never overwritten.
+                    $locked = DB::table('bookings')
+                        ->whereIn('id', $candidates->pluck('id'))
+                        ->lockForUpdate()
                         ->where('status', BookingStatus::Pending->value)
                         ->where('expires_at', '<', now())
-                        ->pluck('id');
+                        ->get();
 
-                    if ($expiredIds->isEmpty()) {
+                    if ($locked->isEmpty()) {
                         return;
                     }
 
-                    // Mark bookings as expired
-                    DB::table('bookings')
-                        ->whereIn('id', $expiredIds)
+                    $candidateIds = $locked->pluck('id');
+
+                    // The UPDATE re-applies both guards as a backstop, so it can
+                    // never overwrite a booking that flipped to confirmed after
+                    // the lock read. Affected rows = true transitions (the
+                    // reported count must never include candidates that were
+                    // confirmed in the meantime).
+                    $transitioned = DB::table('bookings')
+                        ->whereIn('id', $candidateIds)
+                        ->where('status', BookingStatus::Pending->value)
+                        ->where('expires_at', '<', now())
                         ->update([
                             'status' => BookingStatus::Expired->value,
                             'updated_at' => now(),
                         ]);
+
+                    $count += $transitioned;
+
+                    if ($transitioned === 0) {
+                        return;
+                    }
+
+                    // Cascade only against the rows that truly transitioned.
+                    $expiredIds = DB::table('bookings')
+                        ->whereIn('id', $candidateIds)
+                        ->where('status', BookingStatus::Expired->value)
+                        ->pluck('id');
 
                     // Cancel valid tickets for expired bookings
                     DB::table('tickets')
@@ -76,8 +106,6 @@ class ExpireBookings extends Command
                         ->where('status', PaymentStatus::Pending->value)
                         ->update(['status' => PaymentStatus::Cancelled->value]);
                 });
-
-                $count += $candidateIds->count();
             });
 
         if ($count === 0) {
