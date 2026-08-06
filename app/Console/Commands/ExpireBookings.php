@@ -35,9 +35,24 @@ class ExpireBookings extends Command
             ->where('status', BookingStatus::Pending->value)
             ->where('expires_at', '<', now())
             ->chunkById(500, function ($bookings) use (&$count) {
-                $expiredIds = $bookings->pluck('id');
+                $candidateIds = $bookings->pluck('id');
 
-                DB::transaction(function () use ($expiredIds) {
+                DB::transaction(function () use ($candidateIds) {
+                    // Authoritative expiry: only rows still pending AND still
+                    // past their window are expired. A booking confirmed after
+                    // the chunk read has status=confirmed and expires_at=NULL,
+                    // so the guarded UPDATE never clobbers it — this closes the
+                    // read-then-write race with confirmPayment (REQ-CN-010).
+                    $expiredIds = DB::table('bookings')
+                        ->whereIn('id', $candidateIds)
+                        ->where('status', BookingStatus::Pending->value)
+                        ->where('expires_at', '<', now())
+                        ->pluck('id');
+
+                    if ($expiredIds->isEmpty()) {
+                        return;
+                    }
+
                     // Mark bookings as expired
                     DB::table('bookings')
                         ->whereIn('id', $expiredIds)
@@ -62,7 +77,7 @@ class ExpireBookings extends Command
                         ->update(['status' => PaymentStatus::Cancelled->value]);
                 });
 
-                $count += $expiredIds->count();
+                $count += $candidateIds->count();
             });
 
         if ($count === 0) {

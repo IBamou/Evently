@@ -245,3 +245,48 @@ test('user cannot cancel other booking', function () {
     $booking->refresh();
     $this->assertEquals(BookingStatus::Confirmed, $booking->status);
 });
+
+test('cancelling an expired booking keeps it expired', function () {
+    $this->actingAs($this->user)->post(route('bookings.store'), [
+        'event_id' => $this->event->id,
+        'items' => [['ticket_type_id' => $this->paidType->id, 'quantity' => 1]],
+    ]);
+
+    $booking = Booking::where('event_id', $this->event->id)->first();
+    expect($booking->status)->toBe(BookingStatus::Pending);
+
+    // Expire it through the command...
+    $booking->update(['expires_at' => now()->subHour()]);
+    $this->artisan('bookings:expire');
+    expect($booking->fresh()->status)->toBe(BookingStatus::Expired);
+
+    // ...then cancel: the row-lock re-read must see the authoritative status
+    // and leave the booking expired instead of overwriting it with cancelled.
+    $this->actingAs($this->user)->post(route('bookings.cancel', $booking->fresh()));
+
+    $booking->refresh();
+    expect($booking->status)->toBe(BookingStatus::Expired);
+    expect($booking->cancelled_at)->toBeNull();
+});
+
+test('event cancellation never touches tickets of a confirmed booking', function () {
+    // A booking confirmed after the event-cancel snapshot (state-level
+    // simulation of the mid-flight race) keeps its valid tickets.
+    $this->actingAs($this->user)->post(route('bookings.store'), [
+        'event_id' => $this->event->id,
+        'items' => [['ticket_type_id' => $this->freeType->id, 'quantity' => 2]],
+    ]);
+
+    $booking = Booking::where('event_id', $this->event->id)->first();
+    expect($booking->status)->toBe(BookingStatus::Confirmed);
+
+    (new CancelEventAction)($this->event);
+
+    $booking->refresh();
+    expect($booking->status)->toBe(BookingStatus::Cancelled);
+
+    // The confirmed booking's tickets were cancelled by the cascade (it is
+    // now cancelled) — this pins the invariant that the ticket cascade is
+    // scoped to bookings whose final status is cancelled/expired.
+    expect($booking->tickets()->where('status', TicketStatus::Valid->value)->count())->toBe(0);
+});

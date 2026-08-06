@@ -122,8 +122,8 @@ class BookingService
                         throw new RuntimeException('Ticket type not found.');
                     }
 
-                    $lineTotal = (float) $tt->price * $item['quantity'];
-                    $subtotal += $lineTotal;
+                    $lineTotal = round((float) $tt->price * $item['quantity'], 2);
+                    $subtotal = round($subtotal + $lineTotal, 2);
                     $bookingItems[] = [
                         'ticket_type_id' => $tt->id,
                         'ticket_name' => $tt->name,
@@ -249,21 +249,28 @@ class BookingService
 
     /**
      * Cancel a booking and release associated tickets and payments (REQ-CN-001..008).
+     *
+     * The booking is re-read under a row lock so the status check is
+     * authoritative — closes the race with ExpireBookings where a stale
+     * in-memory status could overwrite an already-expired booking with
+     * "cancelled".
      */
     public function cancel(Booking $booking): Booking
     {
-        // Idempotent: already cancelled/expired → return as-is (REQ-CN-008)
-        if (in_array($booking->status, [BookingStatus::Cancelled, BookingStatus::Expired])) {
-            return $booking->load(['items', 'tickets', 'payments', 'event']);
-        }
+        $cancelled = DB::transaction(function () use ($booking) {
+            $locked = Booking::whereKey($booking->id)->lockForUpdate()->firstOrFail();
 
-        DB::transaction(function () use ($booking) {
-            $booking->update([
+            // Idempotent: already cancelled/expired → return as-is (REQ-CN-008)
+            if (in_array($locked->status, [BookingStatus::Cancelled, BookingStatus::Expired])) {
+                return $locked;
+            }
+
+            $locked->update([
                 'status' => BookingStatus::Cancelled,
                 'cancelled_at' => now(),
             ]);
 
-            $booking->tickets()
+            $locked->tickets()
                 ->where('status', TicketStatus::Valid)
                 ->update([
                     'status' => TicketStatus::Cancelled,
@@ -271,12 +278,14 @@ class BookingService
                 ]);
 
             // Cancel pending payments (REQ-CN-007)
-            $booking->payments()
+            $locked->payments()
                 ->where('status', PaymentStatus::Pending)
                 ->update(['status' => PaymentStatus::Cancelled]);
+
+            return $locked;
         });
 
-        return $booking->refresh()->load(['items', 'tickets', 'payments', 'event']);
+        return $cancelled->refresh()->load(['items', 'tickets', 'payments', 'event']);
     }
 
     /**
