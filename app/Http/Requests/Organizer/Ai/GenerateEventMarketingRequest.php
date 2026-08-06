@@ -21,7 +21,7 @@ class GenerateEventMarketingRequest extends FormRequest
             'tone' => ['required', 'string', 'in:'.implode(',', $config['tones'])],
             'event_context' => ['required', 'array'],
             'event_context.title' => ['required', 'string', 'max:255'],
-            'event_context.description' => ['nullable', 'string'],
+            'event_context.description' => ['nullable', 'string', 'max:'.$config['limits']['event_context_max']],
             'event_context.city' => ['nullable', 'string', 'max:255'],
             'event_context.location' => ['nullable', 'string', 'max:255'],
             'event_context.starts_at' => ['nullable', 'date'],

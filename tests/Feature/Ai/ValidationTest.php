@@ -2,6 +2,7 @@
 
 use App\Enums\UserRole;
 use App\Models\User;
+use Illuminate\Support\Facades\Queue;
 
 beforeEach(function () {
     $this->user = User::factory()->create(['role' => UserRole::Organizer]);
@@ -167,4 +168,78 @@ it('rejects field with invalid value', function () {
 
     $response->assertStatus(422)
         ->assertJsonValidationErrors('field');
+});
+
+it('accepts draft event_context.description exactly at the configured limit', function () {
+    $response = $this->actingAs($this->user)->postJson(route('organizer.ai.event-drafts'), [
+        'brief' => 'A music concert',
+        'tone' => 'professional',
+        'language' => 'en',
+        'event_context' => [
+            'description' => str_repeat('a', config('ai-event-copilot.limits.event_context_max')),
+        ],
+    ]);
+
+    // Valid payload, feature disabled → 403 (not 422).
+    $response->assertStatus(403);
+});
+
+it('rejects draft event_context.description above the configured limit', function () {
+    $response = $this->actingAs($this->user)->postJson(route('organizer.ai.event-drafts'), [
+        'brief' => 'A music concert',
+        'tone' => 'professional',
+        'language' => 'en',
+        'event_context' => [
+            'description' => str_repeat('a', config('ai-event-copilot.limits.event_context_max') + 1),
+        ],
+    ]);
+
+    $response->assertStatus(422)
+        ->assertJsonValidationErrors('event_context.description');
+});
+
+it('accepts marketing event_context.description exactly at the configured limit', function () {
+    $response = $this->actingAs($this->user)->postJson(route('organizer.ai.event-marketing'), [
+        'language' => 'en',
+        'tone' => 'professional',
+        'event_context' => [
+            'title' => 'Music Festival',
+            'description' => str_repeat('a', config('ai-event-copilot.limits.event_context_max')),
+        ],
+    ]);
+
+    $response->assertStatus(403);
+});
+
+it('rejects marketing event_context.description above the configured limit', function () {
+    $response = $this->actingAs($this->user)->postJson(route('organizer.ai.event-marketing'), [
+        'language' => 'en',
+        'tone' => 'professional',
+        'event_context' => [
+            'title' => 'Music Festival',
+            'description' => str_repeat('a', config('ai-event-copilot.limits.event_context_max') + 1),
+        ],
+    ]);
+
+    $response->assertStatus(422)
+        ->assertJsonValidationErrors('event_context.description');
+});
+
+it('never dispatches a job when the context payload exceeds the limit', function () {
+    Queue::fake();
+    config(['ai-event-copilot.enabled' => true]);
+
+    $response = $this->actingAs($this->user)->postJson(route('organizer.ai.event-drafts'), [
+        'brief' => 'A music concert',
+        'tone' => 'professional',
+        'language' => 'en',
+        'event_context' => [
+            'description' => str_repeat('a', 50000),
+        ],
+    ]);
+
+    $response->assertStatus(422)
+        ->assertJsonValidationErrors('event_context.description');
+
+    Queue::assertNothingPushed();
 });

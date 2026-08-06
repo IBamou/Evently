@@ -22,6 +22,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property AiGenerationStatus $status
  * @property string|null $language
  * @property string|null $input_hash
+ * @property array<string, mixed>|null $input_payload
  * @property int|null $input_tokens
  * @property int|null $output_tokens
  * @property int|null $latency_ms
@@ -49,6 +50,7 @@ class AiGeneration extends Model
         'status',
         'language',
         'input_hash',
+        'input_payload',
         'input_tokens',
         'output_tokens',
         'latency_ms',
@@ -60,6 +62,7 @@ class AiGeneration extends Model
     {
         return [
             'status' => AiGenerationStatus::class,
+            'input_payload' => 'array',
             'input_tokens' => 'integer',
             'output_tokens' => 'integer',
             'latency_ms' => 'integer',

@@ -7,6 +7,7 @@ use App\Jobs\ProcessAiGenerationJob;
 use App\Models\AiGeneration;
 use App\Models\User;
 use App\Services\Ai\AiGenerationRecorder;
+use App\Services\Ai\AiGenerationService;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Queue;
@@ -355,4 +356,152 @@ it('stores result data on generation for polling', function () {
         ->assertJsonPath('data.result.description', 'Stored description.')
         ->assertJsonPath('data.result.missing_information.0', 'missing item')
         ->assertJsonPath('data.operation', 'generate_draft');
+});
+
+it('rethrows transient failures after fallback fails so the queue can retry', function () {
+    GenerateEventDraftAgent::fake(fn () => throw new ConnectionException('Connection timed out'));
+
+    config([
+        'ai-event-copilot.fallback_provider' => 'groq',
+        'ai-event-copilot.fallback_model' => 'openai/gpt-oss-20b',
+    ]);
+
+    $generation = AiGeneration::factory()->create([
+        'user_id' => $this->user->id,
+        'operation' => 'generate_draft',
+        'status' => AiGenerationStatus::PROCESSING,
+        'language' => 'en',
+        'input_payload' => [
+            'brief' => 'A test event',
+            'tone' => 'professional',
+            'language' => 'en',
+        ],
+    ]);
+
+    $service = app(AiGenerationService::class);
+
+    // Primary and fallback both fail transiently: the service must rethrow so
+    // Laravel's queue retry/backoff actually runs.
+    expect(fn () => $service->execute($generation))->toThrow(ConnectionException::class);
+
+    // The generation stays PROCESSING (final ERROR is left to failed()).
+    $generation->refresh();
+    expect($generation->status)->toBe(AiGenerationStatus::PROCESSING)
+        ->and($generation->error_code)->toBe('ai_generation_timeout')
+        ->and($generation->provider_used)->toBe('groq');
+
+    // Simulate the final queue attempt failing: failed() finalizes ERROR.
+    $job = new ProcessAiGenerationJob($generation);
+    $job->failed(new ConnectionException('Connection timed out'));
+
+    $generation->refresh();
+    expect($generation->status)->toBe(AiGenerationStatus::ERROR)
+        ->and($generation->error_code)->toBe('ai_generation_timeout');
+});
+
+it('marks generation ERROR without rethrowing for non-retryable failures', function () {
+    // Not a transient failure: no fallback, no rethrow, direct ERROR.
+    GenerateEventDraftAgent::fake(fn () => throw new RuntimeException('Provider configuration rejected the request'));
+
+    $generation = AiGeneration::factory()->create([
+        'user_id' => $this->user->id,
+        'operation' => 'generate_draft',
+        'status' => AiGenerationStatus::PROCESSING,
+        'language' => 'en',
+        'input_payload' => [
+            'brief' => 'A test event',
+            'tone' => 'professional',
+            'language' => 'en',
+        ],
+    ]);
+
+    $service = app(AiGenerationService::class);
+
+    // Must NOT throw: the failure is permanent.
+    $service->execute($generation);
+
+    $generation->refresh();
+    expect($generation->status)->toBe(AiGenerationStatus::ERROR)
+        ->and($generation->error_code)->toBe('ai_provider_unavailable');
+});
+
+it('treats invalid structured output as a permanent failure', function () {
+    // Raw non-JSON output must end in ERROR, not a silent empty SUCCESS.
+    GenerateEventDraftAgent::fake(fn () => 'this is not valid json');
+
+    $generation = AiGeneration::factory()->create([
+        'user_id' => $this->user->id,
+        'operation' => 'generate_draft',
+        'status' => AiGenerationStatus::PROCESSING,
+        'language' => 'en',
+        'input_payload' => [
+            'brief' => 'A test event',
+            'tone' => 'professional',
+            'language' => 'en',
+        ],
+    ]);
+
+    $service = app(AiGenerationService::class);
+
+    $service->execute($generation);
+
+    $generation->refresh();
+    expect($generation->status)->toBe(AiGenerationStatus::ERROR)
+        ->and($generation->error_code)->toBe('ai_invalid_response')
+        ->and($generation->result)->toBeNull();
+});
+
+it('never re-executes an already-successful generation', function () {
+    $result = ['title' => 'Original', 'description' => 'Original description.'];
+
+    $generation = AiGeneration::factory()->create([
+        'user_id' => $this->user->id,
+        'operation' => 'generate_draft',
+        'status' => AiGenerationStatus::SUCCESS,
+        'language' => 'en',
+        'result' => $result,
+        'input_payload' => [
+            'brief' => 'A test event',
+            'tone' => 'professional',
+            'language' => 'en',
+        ],
+    ]);
+
+    // If execute() ran the agent, the fake would be consumed.
+    GenerateEventDraftAgent::fake(fn () => throw new RuntimeException('should never run'));
+
+    $service = app(AiGenerationService::class);
+    $service->execute($generation);
+
+    $generation->refresh();
+    expect($generation->status)->toBe(AiGenerationStatus::SUCCESS)
+        ->and($generation->result)->toBe($result);
+});
+
+it('does not duplicate usage counters across retry attempts', function () {
+    GenerateEventDraftAgent::fake([
+        [
+            'title' => 'Retried Event',
+            'description' => 'Retried description.',
+            'category_id' => null,
+            'marketing' => ['social_post' => 'x', 'email_subject' => 'x', 'email_intro' => 'x'],
+            'missing_information' => [],
+        ],
+    ]);
+
+    $this->actingAs($this->user)->postJson(route('organizer.ai.event-drafts'), [
+        'brief' => 'A retried test',
+        'tone' => 'professional',
+        'language' => 'en',
+    ])->assertStatus(202);
+
+    $recorder = app(AiGenerationRecorder::class);
+
+    // The dispatch reserved one slot. Simulate a retry execution cycle:
+    // usage counters must not grow.
+    $generation = AiGeneration::where('user_id', $this->user->id)->firstOrFail();
+    app(AiGenerationService::class)->execute($generation);
+
+    expect($recorder->getDailyCount($this->user->id))->toBe(1)
+        ->and($recorder->getMinuteCount($this->user->id))->toBe(1);
 });

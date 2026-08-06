@@ -23,7 +23,7 @@ class GenerateEventDraftRequest extends FormRequest
             'language' => ['required', 'string', 'in:'.implode(',', $config['languages'])],
             'event_context' => ['nullable', 'array'],
             'event_context.title' => ['nullable', 'string', 'max:255'],
-            'event_context.description' => ['nullable', 'string'],
+            'event_context.description' => ['nullable', 'string', 'max:'.$config['limits']['event_context_max']],
             'event_context.city' => ['nullable', 'string', 'max:255'],
             'event_context.location' => ['nullable', 'string', 'max:255'],
             'event_context.starts_at' => ['nullable', 'date'],

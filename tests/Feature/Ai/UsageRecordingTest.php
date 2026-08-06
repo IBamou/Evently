@@ -145,6 +145,22 @@ it('reserves slots atomically and rolls back when the per-minute limit is hit', 
         'language' => 'en',
     ];
 
+    // Fake the agent so the sync-queue job completes instantly and never
+    // touches a real provider (keeps this timing-sensitive test deterministic).
+    GenerateEventDraftAgent::fake([
+        [
+            'title' => 'Test Event',
+            'description' => 'Test description.',
+            'category_id' => null,
+            'marketing' => [
+                'social_post' => 'Test post',
+                'email_subject' => 'Test subject',
+                'email_intro' => 'Test intro',
+            ],
+            'missing_information' => [],
+        ],
+    ]);
+
     $recorder = app(AiGenerationRecorder::class);
 
     // Bring the user to exactly per_minute_limit - 1 reserved slots.

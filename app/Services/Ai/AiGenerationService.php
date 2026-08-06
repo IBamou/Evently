@@ -48,10 +48,27 @@ class AiGenerationService
 
     /**
      * Execute the AI generation: build agent, run with routing, record result.
+     *
+     * Failure taxonomy (see docs/prompt.md ISSUE 4):
+     * - Retryable: transient provider failures (connection errors, timeouts,
+     *   429/5xx). After the fallback provider also fails, the exception is
+     *   rethrown so the queue retries the job (backoff/tries on the job).
+     * - Non-retryable: invalid structured output, unsupported operation,
+     *   malformed configuration (e.g. auth failures). These mark the
+     *   generation as ERROR and return without throwing.
+     *
+     * The generation stays PROCESSING across retry attempts and is only
+     * finalized (ERROR) by failed() after the last queue attempt, or directly
+     * here for non-retryable failures. A SUCCESS result is never overwritten.
      */
     public function execute(AiGeneration $generation): void
     {
         $startTime = microtime(true);
+
+        // Idempotency safeguard: never execute a finalized generation twice.
+        if ($generation->status !== AiGenerationStatus::PROCESSING) {
+            return;
+        }
 
         try {
             $route = $this->router->resolvePrimary();
@@ -71,6 +88,7 @@ class AiGenerationService
             Log::error('AI copilot job error: '.$e->getMessage(), [
                 'trace' => $e->getTraceAsString(),
                 'generation_id' => $generation->id,
+                'operation' => $generation->operation,
             ]);
 
             $latencyMs = (int) ((microtime(true) - $startTime) * 1000);
@@ -103,14 +121,38 @@ class AiGenerationService
 
             $errorCode = $this->router->mapErrorCode($e);
 
+            // Record telemetry for the attempt. Retryable failures keep the
+            // generation PROCESSING and rethrow so the queue can retry;
+            // failed() finalizes the ERROR state after the last attempt.
             $generation->update([
-                'status' => AiGenerationStatus::ERROR,
                 'provider_used' => $providerUsed->provider,
                 'model_used' => $providerUsed->model,
                 'error_code' => $errorCode,
                 'latency_ms' => $latencyMs,
             ]);
+
+            if ($this->isRetryableFailure($e, $errorCode)) {
+                throw $e;
+            }
+
+            $generation->update(['status' => AiGenerationStatus::ERROR]);
         }
+    }
+
+    /**
+     * Classify a failure after primary + fallback attempts.
+     *
+     * Retryable: transient provider failures (connection/timeout/429/5xx).
+     * Everything else (invalid structured output, config/auth errors,
+     * unsupported operations) is permanent.
+     */
+    private function isRetryableFailure(Throwable $e, string $errorCode): bool
+    {
+        if ($errorCode === 'ai_invalid_response') {
+            return false;
+        }
+
+        return $this->router->isTransientFailure($e);
     }
 
     /**
@@ -177,8 +219,7 @@ class AiGenerationService
             timeout: $config['timeout'],
         );
 
-        /** @var array<string, mixed> $data */
-        $data = json_decode($response->text, true) ?? [];
+        $data = $this->decodeStructuredResponse($response->text);
 
         $categoryId = $data['category_id'] ?? null;
         $category = null;
@@ -227,8 +268,7 @@ class AiGenerationService
             timeout: $config['timeout'],
         );
 
-        /** @var array<string, mixed> $data */
-        $data = json_decode($response->text, true) ?? [];
+        $data = $this->decodeStructuredResponse($response->text);
 
         $result = new MarketingResult(
             socialPost: $data['social_post'] ?? '',
@@ -262,8 +302,7 @@ class AiGenerationService
             timeout: $config['timeout'],
         );
 
-        /** @var array<string, mixed> $data */
-        $data = json_decode($response->text, true) ?? [];
+        $data = $this->decodeStructuredResponse($response->text);
 
         $result = new FieldTransformResult(
             content: $data['content'] ?? '',
@@ -275,31 +314,72 @@ class AiGenerationService
     }
 
     /**
-     * Load the original inputs from the generation's operation context.
+     * Load the original inputs for the generation.
+     *
+     * Source of truth is the durable input_payload column on the generation
+     * row. Legacy rows created before that column existed fall back to the
+     * cache entry and, when found, are persisted back to the database so the
+     * cache is no longer required for execution.
      *
      * @return array<string, mixed>
      */
     private function loadInputs(AiGeneration $generation): array
     {
-        // The inputs are stored in the input_hash but we need the actual data.
-        // We store them in the result column as a temporary measure during creation.
-        // Actually, let's use the operation metadata approach: the generation has
-        // language and operation; we need to store inputs during creation.
-        // We'll use a separate cache-based approach keyed by public_id.
-        $cacheKey = "ai_copilot:inputs:{$generation->public_id}";
+        if (is_array($generation->input_payload)) {
+            return $generation->input_payload;
+        }
 
-        return cache()->get($cacheKey, []);
+        // Legacy fallback: rows created while inputs lived in cache only.
+        $cacheKey = "ai_copilot:inputs:{$generation->public_id}";
+        $inputs = cache()->get($cacheKey, []);
+
+        if (is_array($inputs) && $inputs !== []) {
+            $generation->update(['input_payload' => $inputs]);
+        }
+
+        return $inputs;
     }
 
     /**
-     * Store inputs for later retrieval by the job.
+     * Persist the validated request inputs for later execution by the job.
+     *
+     * Privacy / retention: the persisted payload contains only the sanitized,
+     * validated request fields (brief, audience, tone, language, event
+     * context, content, field, operation, target_language). Payment data,
+     * credentials or secrets can never reach this path because inputs come
+     * exclusively from validated FormRequests. The payload is retained for
+     * the lifetime of the ai_generations row and is used for execution only;
+     * input_hash remains available for analytics and deduplication.
      *
      * @param  array<string, mixed>  $inputs
      */
     public function storeInputs(AiGeneration $generation, array $inputs): void
     {
-        $cacheKey = "ai_copilot:inputs:{$generation->public_id}";
-        cache()->put($cacheKey, $inputs, now()->addHour());
+        $generation->update(['input_payload' => $inputs]);
+    }
+
+    /**
+     * Decode the agent's structured output into an array.
+     *
+     * A null or non-JSON payload is treated as an invalid structured output:
+     * a permanent (non-retryable) failure so the generation ends in ERROR
+     * instead of silently persisting an empty result.
+     *
+     * @return array<string, mixed>
+     */
+    private function decodeStructuredResponse(?string $text): array
+    {
+        if (! is_string($text) || $text === '') {
+            throw new \RuntimeException('AI returned an invalid response.');
+        }
+
+        $data = json_decode($text, true);
+
+        if (! is_array($data)) {
+            throw new \RuntimeException('AI returned an invalid response.');
+        }
+
+        return $data;
     }
 
     /**
