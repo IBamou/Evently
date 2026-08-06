@@ -1,5 +1,5 @@
-{{-- Edit ticket type â€” form language from organizer/events/edit.blade.php.
-     NOTE: keeps @method('PUT') â€” route organizer.ticket-types.update is registered as Route::put (PATCH would 405). --}}
+{{-- Edit ticket type — form language from organizer/events/edit.blade.php.
+     NOTE: keeps @method('PUT') — route organizer.ticket-types.update is registered as Route::put (PATCH would 405). --}}
 <x-app-layout :activeNav="'oevents'">
     <main style="max-width:800px;margin:0 auto;padding:32px 26px 60px">
         <a href="{{ route('organizer.ticket-types.index', $event) }}" style="border:0;background:none;cursor:pointer;font-size:13px;font-weight:700;color:var(--muted);padding:8px 0;margin-bottom:10px;text-decoration:none;display:inline-block">&larr; Back to ticket types</a>
@@ -50,7 +50,7 @@
                            @if($ticketType->bookingItems()->exists()) disabled @endif
                            style="min-height:48px;padding:13px 15px;border:1px solid var(--border);background:var(--surface2);border-radius:12px;font-size:14.5px;outline:none;{{ $ticketType->bookingItems()->exists() ? 'opacity:.6;cursor:not-allowed' : '' }}">
                     @if($ticketType->bookingItems()->exists())
-                        <span style="font-size:12px;color:var(--muted);font-weight:600">Price locked â€” booking items exist.</span>
+                        <span style="font-size:12px;color:var(--muted);font-weight:600">Price locked — booking items exist.</span>
                     @endif
                     @error('price') <span style="color:var(--err);font-size:12px;font-weight:600">{{ $message }}</span> @enderror
                 </label>

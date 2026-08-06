@@ -67,7 +67,7 @@
         </div>
 
         @if(! $hasEvents)
-            {{-- Empty state: organizer has no events yet â€” full-page dashed card (header stays above) --}}
+            {{-- Empty state: organizer has no events yet — full-page dashed card (header stays above) --}}
             <div style="border:2px dashed var(--border);border-radius:18px;padding:60px 26px;text-align:center;background:var(--surface)">
                 <div style="font-size:17px;font-weight:800;margin-bottom:6px">No events yet</div>
                 <div style="font-size:14px;color:var(--muted);margin-bottom:16px">Create your first event to start selling tickets.</div>

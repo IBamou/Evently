@@ -1,10 +1,10 @@
-{{-- Ticket types management â€” grid-list language from admin/categories (11px/800/uppercase header,
+{{-- Ticket types management — grid-list language from admin/categories (11px/800/uppercase header,
      padding:13px 4px rows, chip badges, surface card chrome). --}}
 <x-app-layout :activeNav="'oevents'">
     <main style="max-width:1100px;margin:0 auto;padding:32px 26px 60px">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:6px">
             <div>
-                <h1 style="margin:0 0 6px;font-size:28px;font-weight:800;letter-spacing:-.9px">Ticket Types â€” {{ $event->title }}</h1>
+                <h1 style="margin:0 0 6px;font-size:28px;font-weight:800;letter-spacing:-.9px">Ticket Types — {{ $event->title }}</h1>
                 <p style="margin:0;color:var(--muted);font-size:14.5px">Manage pricing and capacity for your event.</p>
             </div>
             <a href="{{ route('organizer.ticket-types.create', $event) }}" style="display:inline-flex;align-items:center;justify-content:center;padding:13px 20px;min-height:46px;box-sizing:border-box;background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:#fff;border-radius:12px;font-size:14px;font-weight:700;text-decoration:none;white-space:nowrap">+ New ticket type</a>

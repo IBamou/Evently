@@ -51,11 +51,11 @@
                         <div style="font-weight:700;font-family:monospace;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ $booking->reference }}</div>
                     </div>
                     <div role="cell" style="min-width:0">
-                        <div style="font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ $booking->user?->name ?? 'â€”' }}</div>
+                        <div style="font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ $booking->user?->name ?? '—' }}</div>
                         <div style="font-size:11.5px;color:var(--muted);font-weight:600">{{ $booking->user?->email ?? '' }}</div>
                     </div>
                     <div role="cell" style="min-width:0">
-                        <div style="font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ $booking->event?->title ?? 'â€”' }}</div>
+                        <div style="font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ $booking->event?->title ?? '—' }}</div>
                     </div>
                     <span role="cell" style="font-weight:700">{{ $booking->tickets_count }}</span>
                     <span role="cell" style="font-weight:700">{{ $booking->total > 0 ? number_format($booking->total, 0).' '.$booking->currency : 'Free' }}</span>

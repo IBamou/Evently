@@ -52,19 +52,19 @@
                 @endphp
                 <div role="row" style="display:grid;grid-template-columns:1.1fr 1.3fr 1.4fr .8fr .7fr 1fr 1.1fr;gap:12px;padding:13px 4px;border-bottom:1px solid var(--border);align-items:center;font-size:13.5px">
                     <div role="cell" style="min-width:0">
-                        <div style="font-weight:700;font-family:monospace;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ $payment->booking?->reference ?? 'â€”' }}</div>
+                        <div style="font-weight:700;font-family:monospace;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ $payment->booking?->reference ?? '—' }}</div>
                     </div>
                     <div role="cell" style="min-width:0">
-                        <div style="font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ $payment->booking?->user?->name ?? 'â€”' }}</div>
+                        <div style="font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ $payment->booking?->user?->name ?? '—' }}</div>
                         <div style="font-size:11.5px;color:var(--muted);font-weight:600">{{ $payment->booking?->user?->email ?? '' }}</div>
                     </div>
                     <div role="cell" style="min-width:0">
-                        <div style="font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ $payment->booking?->event?->title ?? 'â€”' }}</div>
+                        <div style="font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ $payment->booking?->event?->title ?? '—' }}</div>
                     </div>
                     <span role="cell" style="font-weight:700">{{ $payment->amount > 0 ? number_format($payment->amount, 0).' '.$payment->currency : 'Free' }}</span>
                     <span role="cell" style="font-weight:600;color:var(--muted)">{{ $payment->provider }}</span>
                     <span role="cell"><span style="padding:4px 10px;border-radius:8px;font-size:11px;font-weight:800;text-transform:uppercase;background:{{ $pcBg }};color:{{ $pcFg }}">{{ $payment->status->label() }}</span></span>
-                    <span role="cell" style="font-size:13px;color:var(--muted)">{{ $payment->paid_at?->format('M d, Y H:i') ?? 'â€”' }}</span>
+                    <span role="cell" style="font-size:13px;color:var(--muted)">{{ $payment->paid_at?->format('M d, Y H:i') ?? '—' }}</span>
                 </div>
             @empty
                 <div style="padding:44px 20px;text-align:center">

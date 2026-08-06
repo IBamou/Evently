@@ -2,7 +2,7 @@
 
     <div style="max-width:1380px;margin:0 auto;padding:30px 26px 60px">
         <a href="{{ route('organizer.events.index') }}" style="border:0;background:none;cursor:pointer;font-size:13px;font-weight:700;color:var(--muted);padding:8px 0;margin-bottom:10px;text-decoration:none;display:inline-block">&larr; Back to my events</a>
-        <h1 style="margin:0 0 6px;font-size:28px;font-weight:800;letter-spacing:-.9px">Bookings â€” {{ $event->title }}</h1>
+        <h1 style="margin:0 0 6px;font-size:28px;font-weight:800;letter-spacing:-.9px">Bookings — {{ $event->title }}</h1>
         <p style="margin:0 0 24px;color:var(--muted);font-size:14.5px">All bookings and attendees for this event.</p>
 
         @if(session('success'))
@@ -38,7 +38,7 @@
                         <div style="font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ $booking->reference }}</div>
                     </div>
                     <div role="cell" style="min-width:0">
-                        <div style="font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ $booking->user?->name ?? 'â€”' }}</div>
+                        <div style="font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ $booking->user?->name ?? '—' }}</div>
                         <div style="font-size:11.5px;color:var(--muted);font-weight:600">{{ $booking->user?->email ?? '' }}</div>
                     </div>
                     <span role="cell" style="font-weight:700">{{ $booking->tickets_count }}</span>
@@ -80,10 +80,10 @@
                 @endphp
                 <div role="row" style="display:grid;grid-template-columns:1.2fr 1.5fr 1.2fr 1fr 1fr;gap:12px;padding:13px 4px;border-bottom:1px solid var(--border);align-items:center;font-size:13.5px">
                     <div role="cell" style="min-width:0">
-                        <div style="font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ $ticket->user?->name ?? 'â€”' }}</div>
+                        <div style="font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ $ticket->user?->name ?? '—' }}</div>
                     </div>
                     <span role="cell" style="color:var(--muted);font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ $ticket->user?->email ?? '' }}</span>
-                    <span role="cell" style="font-weight:600">{{ $ticket->ticketType?->name ?? 'â€”' }}</span>
+                    <span role="cell" style="font-weight:600">{{ $ticket->ticketType?->name ?? '—' }}</span>
                     <div role="cell" style="min-width:0">
                         <div style="font-weight:700;font-family:monospace;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ $ticket->code }}</div>
                     </div>

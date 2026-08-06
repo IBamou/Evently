@@ -29,7 +29,7 @@
          'deltaFg' => ($stats['underReview'] ?? 0) > 0 ? 'var(--warn)' : 'var(--muted)',
          'iconBg' => 'rgba(14,165,233,.12)', 'iconFg' => 'var(--cyan)',
          'icon' => 'M8 2v4M16 2v4M3 10h18M5 6h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z'],
-        ['label' => 'Check-in rate', 'value' => $checkInRate !== null ? round($checkInRate) . '%' : 'â€”',
+        ['label' => 'Check-in rate', 'value' => $checkInRate !== null ? round($checkInRate) . '%' : '—',
          'delta' => $checkInRate !== null ? $ticketsChecked . ' scanned' : 'No check-ins yet',
          'deltaFg' => 'var(--muted)',
          'iconBg' => 'rgba(22,163,74,.12)', 'iconFg' => 'var(--ok)',
@@ -48,14 +48,14 @@
 <x-app-layout :activeNav="'odash'">
 
     <div style="max-width:1380px;margin:0 auto;padding:30px 26px 60px">
-        {{-- Header row: h1 + sub. The design's range tabs were dead <button type="button">s â€” removed (dead UI). --}}
+        {{-- Header row: h1 + sub. The design's range tabs were dead <button type="button">s — removed (dead UI). --}}
         <div style="margin-bottom:24px">
             <h1 style="margin:0 0 6px;font-size:28px;font-weight:800;letter-spacing:-.9px">Platform dashboard</h1>
             <p style="margin:0;color:var(--muted);font-size:14.5px">Live sales across your events &middot; last 30 days</p>
         </div>
 
         @if(! $hasEvents)
-            {{-- Empty state: no events on the platform yet â€” full-page dashed card (mirrors organizer). --}}
+            {{-- Empty state: no events on the platform yet — full-page dashed card (mirrors organizer). --}}
             <div style="border:2px dashed var(--border);border-radius:18px;padding:60px 26px;text-align:center;background:var(--surface)">
                 <div style="font-size:17px;font-weight:800;margin-bottom:6px">No events yet</div>
                 <div style="font-size:14px;color:var(--muted);margin-bottom:16px">Events submitted by organizers will appear here, and platform stats will start filling in.</div>

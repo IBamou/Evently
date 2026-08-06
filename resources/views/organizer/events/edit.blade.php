@@ -1,6 +1,6 @@
 @php
-    // City suggestions â€” no cities table exists, so the design's suggestion list is kept.
-    $cities = ['Casablanca', 'Rabat', 'Marrakech', 'Tanger', 'Chefchaouen', 'SalÃ©'];
+    // City suggestions — no cities table exists, so the design's suggestion list is kept.
+    $cities = ['Casablanca', 'Rabat', 'Marrakech', 'Tanger', 'Chefchaouen', 'Salé'];
 
     $statusBadge = [
         'draft' => ['rgba(91,119,148,.14)', 'var(--muted)'],

@@ -1,4 +1,4 @@
-{{-- Create ticket type â€” form language from organizer/events/create.blade.php. --}}
+{{-- Create ticket type — form language from organizer/events/create.blade.php. --}}
 <x-app-layout :activeNav="'oevents'">
     <main style="max-width:800px;margin:0 auto;padding:32px 26px 60px">
         <a href="{{ route('organizer.ticket-types.index', $event) }}" style="border:0;background:none;cursor:pointer;font-size:13px;font-weight:700;color:var(--muted);padding:8px 0;margin-bottom:10px;text-decoration:none;display:inline-block">&larr; Back to ticket types</a>

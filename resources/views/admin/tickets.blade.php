@@ -14,7 +14,7 @@
             <div style="margin-bottom:16px;padding:12px 16px;border-radius:12px;background:rgba(220,38,38,.1);border:1px solid rgba(220,38,38,.3);color:var(--err);font-size:13.5px;font-weight:700">{{ session('error') }}</div>
         @endif
 
-        {{-- Filter bar: GET to admin.tickets.index (contract: $filters {event_id?, status?, search?} â€” no events list is passed to this view yet, so status + search only) --}}
+        {{-- Filter bar: GET to admin.tickets.index (contract: $filters {event_id?, status?, search?} — no events list is passed to this view yet, so status + search only) --}}
         <form method="GET" action="{{ route('admin.tickets.index') }}" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;align-items:center">
             <select name="status" aria-label="Status" style="min-height:40px;padding:10px 13px;border:1px solid var(--border);background:var(--surface2);border-radius:10px;font-size:13px;outline:none">
                 <option value="">All statuses</option>
@@ -51,13 +51,13 @@
                         <div style="font-weight:700;font-family:monospace;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ $ticket->code }}</div>
                     </div>
                     <div role="cell" style="min-width:0">
-                        <div style="font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ $ticket->user?->name ?? 'â€”' }}</div>
+                        <div style="font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ $ticket->user?->name ?? '—' }}</div>
                         <div style="font-size:11.5px;color:var(--muted);font-weight:600">{{ $ticket->user?->email ?? '' }}</div>
                     </div>
                     <div role="cell" style="min-width:0">
-                        <div style="font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ $ticket->event?->title ?? 'â€”' }}</div>
+                        <div style="font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ $ticket->event?->title ?? '—' }}</div>
                     </div>
-                    <span role="cell" style="font-weight:600;color:var(--muted)">{{ $ticket->ticketType?->name ?? 'â€”' }}</span>
+                    <span role="cell" style="font-weight:600;color:var(--muted)">{{ $ticket->ticketType?->name ?? '—' }}</span>
                     <div role="cell">
                         <span style="padding:4px 10px;border-radius:8px;font-size:11px;font-weight:800;text-transform:uppercase;background:{{ $tcBg }};color:{{ $tcFg }}">{{ $ticket->status->label() }}</span>
                         @if($ticket->status->value === 'used' && $ticket->checked_in_at)

@@ -2,7 +2,7 @@
     <main style="max-width:1100px;margin:0 auto;padding:30px 26px 60px">
         <a href="{{ route('organizer.check-in.picker') }}" style="border:0;background:none;cursor:pointer;font-size:13px;font-weight:700;color:var(--muted);padding:8px 0;margin-bottom:10px;text-decoration:none;display:inline-block">&larr; Change event</a>
         <h1 style="font-size:28px;font-weight:800;letter-spacing:-.9px;margin:0 0 6px">Door check-in</h1>
-        <p style="font-size:14.5px;color:var(--muted);margin:0 0 24px">Scan attendee QR codes or type a ticket code manually. â€” {{ $event->title }}</p>
+        <p style="font-size:14.5px;color:var(--muted);margin:0 0 24px">Scan attendee QR codes or type a ticket code manually. — {{ $event->title }}</p>
 
         <div style="display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:20px;align-items:start">
             {{-- Scanner + manual input --}}
@@ -16,10 +16,10 @@
                         </div>
                         <div style="position:absolute;inset:14%;border:2px solid rgba(255,255,255,.35);border-radius:12px;pointer-events:none;z-index:1"></div>
                         <div style="position:absolute;left:14%;right:14%;top:16%;height:2px;background:linear-gradient(90deg,transparent,var(--cyan),transparent);box-shadow:0 0 14px var(--cyan);animation:scanline 2.4s ease-in-out infinite;pointer-events:none;z-index:1"></div>
-                        <div style="position:absolute;left:0;right:0;bottom:14px;text-align:center;color:rgba(255,255,255,.8);font-size:12.5px;font-weight:700;pointer-events:none;z-index:1">Camera active Â· hold the QR steady</div>
+                        <div style="position:absolute;left:0;right:0;bottom:14px;text-align:center;color:rgba(255,255,255,.8);font-size:12.5px;font-weight:700;pointer-events:none;z-index:1">Camera active · hold the QR steady</div>
                     </div>
 
-                    <div id="cam-fallback" style="display:none;padding:10px 14px;border-radius:10px;background:rgba(217,119,6,.1);border:1px solid rgba(217,119,6,.25);color:var(--warn);font-size:12.5px;margin-bottom:12px">Camera unavailable â€” type the reference below.</div>
+                    <div id="cam-fallback" style="display:none;padding:10px 14px;border-radius:10px;background:rgba(217,119,6,.1);border:1px solid rgba(217,119,6,.25);color:var(--warn);font-size:12.5px;margin-bottom:12px">Camera unavailable — type the reference below.</div>
 
                     {{-- Manual entry --}}
                     <form action="{{ route('organizer.check-in.scan', $event) }}" method="POST" id="manual-form" style="display:flex;gap:10px">
@@ -30,7 +30,7 @@
                     </form>
                 </div>
 
-                {{-- Inline scan result (fetch flow) â€” hidden until the first scan --}}
+                {{-- Inline scan result (fetch flow) — hidden until the first scan --}}
                 <div id="scan-result" style="display:none"></div>
 
                 {{-- Result flash (no-JS fallback: normal POST â†’ redirect with flash) --}}
@@ -229,7 +229,7 @@
                         }
                     })
                     .catch(function () {
-                        renderBanner({ result: 'error', message: 'Network error â€” check your connection and try again.' }, 'error');
+                        renderBanner({ result: 'error', message: 'Network error — check your connection and try again.' }, 'error');
                     })
                     .finally(function () {
                         if (submitBtn) submitBtn.disabled = false;
@@ -263,7 +263,7 @@
                     var art = document.getElementById('scanner-art');
                     if (art) art.style.display = 'none';
                 }).catch(function () {
-                    // Lazy chunk failed to load â€” the camera never started. Show the
+                    // Lazy chunk failed to load — the camera never started. Show the
                     // muted fallback in the viewfinder too (cam-fallback is shown via onError).
                     window.EventlyQr.showQrFallback(document.getElementById('qr-scanner'));
                 });

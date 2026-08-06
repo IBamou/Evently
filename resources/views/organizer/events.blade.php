@@ -1,6 +1,6 @@
 @use('App\Helpers\Helper')
 @php
-    // Row cover gradient â€” shared helper (App\Helpers\Helper, was duplicated here).
+    // Row cover gradient — shared helper (App\Helpers\Helper, was duplicated here).
     $rowGrad = fn ($event) => Helper::categoryGradient($event->category?->slug) ?? 'linear-gradient(135deg,#1E3A8A,#7C3AED)';
 
     // Status â†’ [badgeBg, badgeFg]
@@ -75,10 +75,10 @@
                             <div style="font-size:11.5px;color:var(--muted);font-weight:600">{{ $event->city }}</div>
                         </div>
                     </div>
-                    <span style="color:var(--muted);font-weight:600">{{ $event->starts_at?->format('D, j M Y') ?? 'â€”' }}</span>
-                    {{-- No ticket/pricing tables exist yet â€” honest placeholder. --}}
-                    <span style="font-weight:700;color:var(--muted)">â€”</span>
-                    <span style="font-size:12px;font-weight:700;color:var(--muted)">â€”</span>
+                    <span style="color:var(--muted);font-weight:600">{{ $event->starts_at?->format('D, j M Y') ?? '—' }}</span>
+                    {{-- No ticket/pricing tables exist yet — honest placeholder. --}}
+                    <span style="font-weight:700;color:var(--muted)">—</span>
+                    <span style="font-size:12px;font-weight:700;color:var(--muted)">—</span>
                     <span><span style="padding:5px 10px;border-radius:8px;font-size:11px;font-weight:800;text-transform:uppercase;background:{{ $badgeBg }};color:{{ $badgeFg }}">{{ $event->status->label() }}</span></span>
                     <div style="display:flex;gap:6px;justify-content:flex-end">
                         <a href="{{ route('organizer.ticket-types.index', $event) }}" title="Ticket types" aria-label="Ticket types" style="width:34px;height:34px;display:grid;place-items:center;border:1px solid var(--border);background:var(--surface2);border-radius:9px;cursor:pointer;color:var(--muted);text-decoration:none">

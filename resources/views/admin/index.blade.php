@@ -1,6 +1,6 @@
 @use('App\Helpers\Helper')
 @php
-    // â”€â”€ Defensive defaults â€” this view also renders bare via /dashboard (no data passed). â”€â”€
+    // â”€â”€ Defensive defaults — this view also renders bare via /dashboard (no data passed). â”€â”€
     $underReview ??= collect();
     $events ??= null;
     $trashed ??= null;
@@ -13,7 +13,7 @@
     $cityBars ??= [];
     $reportStats ??= [];
 
-    // Row cover gradient â€” shared helper (App\Helpers\Helper, was duplicated here).
+    // Row cover gradient — shared helper (App\Helpers\Helper, was duplicated here).
     $rowGrad = fn ($event) => Helper::categoryGradient($event->category?->slug) ?? 'linear-gradient(135deg,#1E3A8A,#7C3AED)';
 
     // Status â†’ [badgeBg, badgeFg]
@@ -29,7 +29,7 @@
     $aTab = request('tab', 'Approvals');
     $aTab = in_array($aTab, ['Approvals', 'Events', 'Users', 'Reports'], true) ? $aTab : 'Approvals';
 
-    // Reports KPIs â€” real platform stats from the admin controller ($reportStats contract:
+    // Reports KPIs — real platform stats from the admin controller ($reportStats contract:
     // grossVolume float MAD, activeUsers int, organizers int, refundRate float).
     $fmtVolume = function ($v): string {
         $v = (float) $v;
@@ -76,7 +76,7 @@
         </div>
 
         @if($aTab === 'Approvals')
-        {{-- Approvals â€” real events under review --}}
+        {{-- Approvals — real events under review --}}
         <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:26px">
             @forelse($underReview as $event)
                 <article style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:18px;display:flex;align-items:center;gap:18px;flex-wrap:wrap">
@@ -113,7 +113,7 @@
         @endif
 
         @if($aTab === 'Events')
-        {{-- All events â€” real data, with cancel/delete/restore --}}
+        {{-- All events — real data, with cancel/delete/restore --}}
         <div style="background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:20px;margin-bottom:26px">
             <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px">
                 <h2 style="margin:0;font-size:16px;font-weight:800">All events</h2>
@@ -153,7 +153,7 @@
                                 <div style="font-size:11.5px;color:var(--muted);font-weight:600">{{ $event->city }}</div>
                             </div>
                         </div>
-                        <span style="color:var(--muted);font-weight:600">{{ $event->starts_at?->format('D, j M Y') ?? 'â€”' }}</span>
+                        <span style="color:var(--muted);font-weight:600">{{ $event->starts_at?->format('D, j M Y') ?? '—' }}</span>
                         <span style="font-weight:600;color:var(--muted)">{{ $event->category?->name }}</span>
                         <span style="font-weight:600;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ $event->organizer?->name }}</span>
                         <span><span style="padding:5px 10px;border-radius:8px;font-size:11px;font-weight:800;text-transform:uppercase;background:{{ $badgeBg }};color:{{ $badgeFg }}">{{ $event->status->label() }}</span></span>
@@ -219,7 +219,7 @@
         @endif
 
         @if($aTab === 'Users')
-        {{-- Users â€” real accounts from the admin controller ($users paginator: name, email, role, bookings_count) --}}
+        {{-- Users — real accounts from the admin controller ($users paginator: name, email, role, bookings_count) --}}
         <div style="background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:20px;margin-bottom:26px">
             <form method="GET" action="{{ route('admin.events.index') }}" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:16px">
                 <input type="hidden" name="tab" value="Users">
@@ -242,7 +242,7 @@
                             <span style="font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ $u->name }}</span>
                         </div>
                         <span style="color:var(--muted);font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ $u->email }}</span>
-                        <span><span style="padding:5px 10px;border-radius:8px;font-size:11px;font-weight:800;text-transform:uppercase;background:var(--chip);color:var(--primary)">{{ $u->role?->label() ?? 'â€”' }}</span></span>
+                        <span><span style="padding:5px 10px;border-radius:8px;font-size:11px;font-weight:800;text-transform:uppercase;background:var(--chip);color:var(--primary)">{{ $u->role?->label() ?? '—' }}</span></span>
                         <span style="text-align:right;font-weight:700">{{ $u->bookings_count }}</span>
                     </div>
                 @endforeach
@@ -259,7 +259,7 @@
         @endif
 
         @if($aTab === 'Reports')
-        {{-- Reports â€” real platform KPIs ($reportStats) + real top cities ($cityBars) --}}
+        {{-- Reports — real platform KPIs ($reportStats) + real top cities ($cityBars) --}}
         @if($hasReportData)
             <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;margin-bottom:18px">
                 @foreach($reportCards as $k)
