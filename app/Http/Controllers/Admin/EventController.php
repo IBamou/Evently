@@ -137,7 +137,8 @@ class EventController extends Controller
             $query->orderBy('created_at', 'desc');
         }
 
-        $events = $query->paginate(min((int) $request->input('per_page', 15), 50));
+        $perPage = max(1, min((int) $request->input('per_page', 15), 50));
+        $events = $query->paginate($perPage);
 
         $filters = $request->only(['status', 'organizer_id', 'search', 'city', 'sort', 'per_page']);
 

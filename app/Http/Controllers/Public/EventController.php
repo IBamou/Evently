@@ -86,8 +86,8 @@ class EventController extends Controller
             $query->orderBy('starts_at', 'asc');
         }
 
-        // Paginate (max 50)
-        $perPage = min((int) $request->input('per_page', 15), 50);
+        // Paginate (max 50, min 1)
+        $perPage = max(1, min((int) $request->input('per_page', 15), 50));
         $events = $query->paginate($perPage);
 
         // Featured: upcoming published ordered by starts_at, take 3
