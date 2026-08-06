@@ -1,66 +1,79 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Evently
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Evently is a Laravel-powered event management platform: organizers publish events with paid/free ticket types, users book tickets in a few clicks, and organizers check guests in with QR codes at the door. Includes an AI Event Copilot that drafts event pages and marketing copy.
 
-## About Laravel
+## Stack
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+- Laravel 13 + Livewire 4 (Breeze, Tailwind CSS, Alpine.js)
+- PHP 8.4, MySQL (SQLite for tests)
+- Pest for testing, Pint for code style, PHPStan (Larastan) for static analysis
+- Laravel AI (OpenRouter primary / Groq fallback) for the AI Event Copilot
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## Setup
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+```bash
+composer install
+cp .env.example .env        # then configure DB + AI keys
+php artisan key:generate
+php artisan migrate --seed
+npm install && npm run build
+herd services:start mysql redis  # or your local equivalents
+php artisan serve               # if not using Herd
+```
 
-## Learning Laravel
+The app is served by Laravel Herd at `https://evently.test` (see `herd sites`).
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+### Queues
 
-You may also try the [Laravel Bootcamp](https://bootcamp.laravel.com), where you will be guided through building a modern Laravel application from scratch.
+Bookings and AI generation are processed through the queue:
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+```bash
+php artisan queue:work --queue=ai-copilot,default --timeout=150 --tries=2
+```
 
-## Laravel Sponsors
+The AI Copilot ships with real free-tier provider keys configured in `.env`
+(`OPENROUTER_API_KEY`, `GROQ_API_KEY`). **Never switch the configured models to
+paid ones** — the free models (`nvidia/nemotron-3-nano-30b-a3b:free`,
+`openai/gpt-oss-20b`) keep the demo free of cost. Rate limits are enforced
+server-side (50/day, 5/minute per user).
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+## Key Flows
 
-### Premium Partners
+- **Booking** — checkout validates quantity rules and server-side pricing, holds
+  capacity with row locks, and guarantees idempotency per user+event+selection.
+  Free bookings confirm instantly; paid bookings stay pending with a 15-minute
+  payment window, then expire.
+- **Payments (mock)** — payment confirmation is currently **simulated**: mock
+  card details confirm a booking instantly without any charge. The mock path is
+  gated behind `PAYMENTS_MOCK_CONFIRM` in `config/payments.php`; set it to
+  `false` before wiring a real provider, which also blocks the manual
+  confirm endpoint.
+- **Tickets** — issued on confirmation with unique QR codes; organizers scan
+  them at check-in.
+- **AI Event Copilot** — organizers generate event drafts and marketing copy.
+  Prompt inputs and outputs are persisted, provider errors are retried through
+  the queue, and structured output failures are marked as permanent errors
+  instead of silently succeeding.
 
-- **[Vehikl](https://vehikl.com/)**
-- **[Tighten Co.](https://tighten.co)**
-- **[WebReinvent](https://webreinvent.com/)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel/)**
-- **[Cyber-Duck](https://cyber-duck.co.uk)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Jump24](https://jump24.co.uk)**
-- **[Redberry](https://redberry.international/laravel/)**
-- **[Active Logic](https://activelogic.com)**
-- **[byte5](https://byte5.de)**
-- **[OP.GG](https://op.gg)**
+## Testing
 
-## Contributing
+```bash
+php artisan test                    # full suite
+php artisan test --filter=Booking   # a single area
+vendor/bin/pint --dirty             # code style
+vendor/bin/phpstan analyse          # static analysis
+```
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+## Roles
 
-## Code of Conduct
+- **Attendees** — browse events, book tickets, manage their bookings (cancel,
+  confirm mock payment), view QR tickets.
+- **Organizers** — manage events and ticket types, view bookings, check guests
+  in.
+- **Admins** — manage events, bookings, and payments; can cancel any booking.
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+## Requirements Traceability
 
-## Security Vulnerabilities
-
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
-
-## License
-
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+Core flows implement a requirements set (`REQ-BK-*` booking, `REQ-PY-*`
+payments, `REQ-CN-*` cancellation/expiry, `REQ-TK-*` tickets) that is
+enumerated in code comments and covered by the Pest suite in `tests/Feature/`.

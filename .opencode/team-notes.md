@@ -2010,9 +2010,9 @@ Moved the layout-critical flex styles into the CSS classes (which Alpine's `:sty
 
 ---
 
-## STATE SYNC 7 � AI Copilot: keys wired + async queue + verified E2E (2026-08-03)
+## STATE SYNC 7 � AI Copilot: keys wired + async queue + verified E2E (2026-08-03)
 
-**User provided real API keys (old IEvent .env) � wired ONLY what this app needs into .env (gitignored) + .env.example (empty placeholders):**
+**User provided real API keys (old IEvent .env) � wired ONLY what this app needs into .env (gitignored) + .env.example (empty placeholders):**
 - Primary: `AI_EVENT_COPILOT_PROVIDER=openrouter`, AI_EVENT_COPILOT_MODEL=nvidia/nemotron-3-nano-30b-a3b:free, `OPENROUTER_API_KEY`, `OPENROUTER_BASE_URL=https://openrouter.ai/api/v1`
 - Fallback: `AI_EVENT_COPILOT_FALLBACK_PROVIDER=groq`, `AI_EVENT_COPILOT_FALLBACK_MODEL=llama-3.3-70b-versatile`, `GROQ_API_KEY`, `GROQ_BASE_URL=https://api.groq.com/openai/v1`
 - AI_EVENT_COPILOT_ENABLED=true, TIMEOUT=30, DAILY_LIMIT=50, PER_MINUTE_LIMIT=5, PROMPT_VERSION=event-copilot-v1
@@ -2023,11 +2023,11 @@ Moved the layout-critical flex styles into the CSS classes (which Alpine's `:sty
 - Enum AiGenerationStatus += PROCESSING. 3 POSTs return **202 {data:{generation_id,status:'processing'}}** + dispatch job; NEW **GET organizer/ai/generations/{public_id}** polling endpoint (status/result/error_code/error_message/provider_used/model_used/latency_ms). Feedback route unchanged. Inputs cached (ai_copilot:inputs:{public_id}, 1h) for job.
 - Tests: 33?47 AI tests (async dispatch w/ Queue::fake, polling, fallback, ownership 404, disabled 403, rate-limit). **FULL SUITE 347 passed / 1059 assertions; PHPStan 0 errors; Pint ok.**
 
-**Frontend (polling, done by build):** i-copilot.blade.php � POST ? 202 ? pollGeneration() GET status every 1.5s up to 90s; draft result mapped to old shape via draftFromResult() (suggestions/title/description/category/marketing/missing_information); marketing sets draft.suggestions.marketing; transform fills compare box (content/language/warnings). Header comment updated w/ async contract.
+**Frontend (polling, done by build):** i-copilot.blade.php � POST ? 202 ? pollGeneration() GET status every 1.5s up to 90s; draft result mapped to old shape via draftFromResult() (suggestions/title/description/category/marketing/missing_information); marketing sets draft.suggestions.marketing; transform fills compare box (content/language/warnings). Header comment updated w/ async contract.
 
 **REAL E2E VERIFIED (browser, demo-organizer Salma, flag ON, queue worker manual queue:work --once --queue=ai-copilot):** draft POST 202 ? ? poll ? ? success with real OpenRouter suggestions (title/desc/category=Music/marketing/missing-info) ?; transform Improve rewrite (post-202 ? queue ? poll) rendered "Festival of Digital Beats in Casablanca" + Apply ?. DB rows: provider_used=openrouter, model_used=nvidia/nemotron-3-nano-30b-a3b:free, latency 22.5s/5.5s ?.
 
-**Gotchas:** (1) Recorder creates a second usage-ledger AiGeneration row per success (NULL provider/model) � harmless, flagged; (2) **USER MUST RUN php artisan queue:work (or listen) for real generations on Herd** � without a worker, generations stay processing and UI times out after ~90s; (3) tinker strings need .env values quoted (PS quoting hazard).
+**Gotchas:** (1) Recorder creates a second usage-ledger AiGeneration row per success (NULL provider/model) � harmless, flagged; (2) **USER MUST RUN php artisan queue:work (or listen) for real generations on Herd** � without a worker, generations stay processing and UI times out after ~90s; (3) tinker strings need .env values quoted (PS quoting hazard).
 
 **Status:** uncommitted on feature/ai-event-copilot (all AI work). Pending: user runs queue worker; ask about commit/push; booking branch still uncommitted to main (PR not opened).
 
@@ -2100,3 +2100,156 @@ Moved the layout-critical flex styles into the CSS classes (which Alpine's `:sty
 **Included:** AI backend (3 agents + actions + DTOs + recorder + router + job + controller + 4 requests + 3 migrations + 2 models + 2 factories + trait + configs), copilot drawer UI (ai-copilot.blade.php + create/edit includes + confirm-modal action callback), tests/Feature/Ai (6 files), docs/, stubs/, .env.example config block, team-notes STATE SYNC 1-10.
 
 **Status:** branch pushed, no PR opened (user hasn't asked). User runs worker manually: php artisan queue:work --queue=ai-copilot --timeout=150 (note: their default queue:work does NOT pick up ai-copilot jobs - STATE SYNC 10).
+
+---
+
+## STATE SYNC 12 -- NEW GOAL: core-hardening pass per docs/prompt.md (2026-08-05, build)
+
+**CURRENT GOAL (supersedes design-port work):** Execute the full core-hardening pass from docs/prompt.md on branch fix/core-hardening (created from feature/ai-event-copilot, which was committed 6099215 + 88fb070 and pushed). docs/prompt.md is UNTRACKED. Rules: logical local commits, NO push unless user asks, never merge to main, preserve unrelated work. Final report format: 15 sections starting "Branch: fix/core-hardening" and "Status: COMPLETE/PARTIAL/BLOCKED".
+
+**Baseline (recorded before edits):** Pest 348 passed / 1064 assertions; PHPStan level 8 = 0 errors; npm run build OK (23.76s); Pint --test timed out twice (180s/300s) with no hung process found later - RE-RUN pending, may be real.
+
+**AUDIT FINDINGS (all verified against code):**
+- ISSUE 1 CONFIRMED: TicketTypeController - every method only authorizes update on the EVENT, never checks $ticketType->event_id === $event->id. Cross-event IDOR via nested URL. Fix: scoped binding (->scopeBindings()) on ticket-types routes + defense-in-depth ownership check in controller/request.
+- ISSUE 2 CONFIRMED: ExpireBookings bulk-updates whereIn(id) with NO re-check of status in UPDATE where-clause, NO row locks - stale candidate list can overwrite a just-confirmed booking to Expired + cancel its tickets + pending payment. BookingService::confirmPayment is already lock-safe (lockForUpdate + re-read + expiry check). BookingService::cancel() has NO lockForUpdate (minor concurrent cancel/confirm race). CancelEventAction has same stale-bulk pattern (pluck then update without status guard, though inside a transaction).
+- ISSUE 3 CONFIRMED: UpdateEventAction only blocks when EXISTING starts_at is past; UpdateEventRequest checks only resulting ends_at > starts_at. Upcoming event can be rescheduled to past starts_at. Fix: resulting-state check starts_at > now (request + action).
+- ISSUE 4 CONFIRMED: AiGenerationService::execute() catches ALL Throwables, tries fallback, then marks ERROR and RETURNS (swallow) - queue sees job as processed; $tries=2/$backoff=[10,30]/failed() are DEAD. Fix: rethrow retryable (transient per AiProviderRouter::isTransientFailure) so queue retries; failed() marks ERROR (already exists); never overwrite SUCCESS; usage counters (cache reserve) unaffected by retries.
+- ISSUE 5 CONFIRMED: inputs stored ONLY in cache "ai_copilot:inputs:{public_id}" TTL 1h (loadInputs/storeInputs). Cache loss -> job executes with [] -> garbage/error. Fix: nullable JSON input_payload column on ai_generations via NEW migration; store at dispatch; loadInputs reads DB (cache only as fallback for old rows). Privacy: inputs are event text (brief/audience/context) - store sanitized JSON, no card data, retention = row lifetime (documented).
+- ISSUE 6 CONFIRMED (partial): event_context.description is UNBOUNDED in GenerateEventDraftRequest + GenerateEventMarketingRequest (config limits.event_context_max=2000 exists but unused). All other fields bounded (brief 500, audience 200, content 5000, title/city/location 255). Fix: apply event_context_max to description in both requests.
+- ISSUE 7 CONFIRMED: StoreTicketTypeRequest: no min_per_booking <= max_per_booking cross-check (min can exceed quantity); UpdateTicketTypeRequest: max_per_booking lte:quantity compares only to SUBMITTED quantity (not effective), min<=max not checked on effective state, sales_end_at before event.starts_at closure exists in STORE but MISSING in UPDATE. Fix: effective-state validation (existing + submitted).
+- ISSUE 8 CONFIRMED: Public + Admin EventController use paginate(min((int)$request->input('per_page',15),50)) - 0/negative/abc mishandled (0 = falsy -> default; negative -> bad paginator; abc -> 0 -> default; but per_page=0 via ?per_page=0 -> (int)0 -> falsy -> default OK; negative -1 -> paginate(-1) -> invalid). Organizer uses IndexEventRequest (min:1 max:50 - OK). Fix: clamp max(1, min(...,50)) in public + admin (or FormRequest).
+- ISSUE 9 CONFIRMED: mojibake real in ~15 blade files: '�"' (em-dash) as empty-state placeholder + comments in organizer/ticket-types/{index,edit,create}, organizer/events*.blade.php, dashboard, check-in/index, organizer/bookings/index, admin/{tickets,payments,index,dashboard,categories,bookings}; 'Salé' -> Sal� in organizer/events/{create,edit}.blade.php city suggestions. Per-occurrence fix (NOT blind replace). storage/framework/views/* = compiled, ignore. .opencode/team-notes.md + docs/prompt.md are internal, skip.
+- ISSUE 10 CONFIRMED: app/Actions/Ai/{GenerateEventDraftAction,GenerateEventMarketingAction,TransformEventFieldAction}.php - zero references anywhere (grep: php/tests/routes/views). Active flow: EventAiController -> AiGenerationService -> ProcessAiGenerationJob. Safe to delete (keep DTOs/agents/services).
+- ISSUE 11: mock payment boundary reviewed - POST /bookings/{booking}/confirm-payment is owner-only (authorize view + explicit user check) + throttle:10,1 + BookingService state machine (lock-safe). It is BY DESIGN self-confirmable (demo). Action: add explicit config gate config('payments.mock_enabled', true) + UI "mock payment" badge + guard, keep demo flow working, add test.
+- ISSUE 12: money - BookingService line_total = (float)price*quantity float math; subtotal float accumulation; bccomp for isFree. Decimal:2 casts round at persist. Small determinism fix: round(line_total, 2) + round(subtotal, 2). StoreBookingRequest::prepareForValidation does same float sum for validation only (fine).
+- ISSUE 13: routes/web.php = 127 lines, well-grouped (public/user/organizer/AI/check-in/admin). Verdict: NO split needed; document recommendation. [mimo must edit routes/web.php ONLY for scopeBindings on ticket-types group]
+- ISSUE 14: large classes - assess only, no risky refactor. AI partial + 2 EventControllers are cohesive enough; skip extraction, document.
+- ISSUE 15: README.md is stock Laravel skeleton (66 lines) - replace with full Evently README (features, stack, architecture, roles, setup, AI queue worker command, testing, AI env config, mock payment notice, screenshots placeholder).
+
+**FILE OWNERSHIP MAP (non-overlapping):**
+- mimo (package A): routes/web.php (scopeBindings ONLY), TicketTypeController, StoreTicketTypeRequest, UpdateTicketTypeRequest, UpdateEventRequest, UpdateEventAction, public+admin+organizer EventController per_page, IndexEventRequest, tests: TicketTypeTest, EventLifecycleTest, new NestedTicketTypeAuthTest, new PublicPaginationTest, new TicketTypeInvariantsTest.
+- big-pickle (package B): AiGenerationService, ProcessAiGenerationJob, EventAiController, 3 AI FormRequests, AiGeneration model, new migration add_input_payload_to_ai_generations, delete app/Actions/Ai/*, ALL blade view mojibake fixes, tests: Feature/Ai/* updates + new AiRetryAndDurabilityTest, new AiContextLimitsTest.
+- build (package C): BookingService (cancel lock + money rounding), ExpireBookings (atomic expiry), CancelEventAction (status guards), config/payments.php + UserBookingController confirmPayment guard + bookings/show blade mock badge, README.md, DB constraints migration (ticket code unique, idempotency index - verify existing first), tests: BookingTest, PaymentTest, CancellationTest, ExpireBookingsTest, new MockPaymentBoundaryTest, EventLifecycleTest.
+
+**VERIFICATION GATES (final):** composer dump-autoload; php artisan test --compact (all green); vendor/bin/pint --test (then vendor/bin/pint to fix); vendor/bin/phpstan analyse --no-progress --memory-limit=1G; npm run build; migrate:fresh on TESTING db only (never dev db). THEN final adversarial self-review + 15-section report.
+
+**NOTE:** agents must NOT touch .env / real keys / shipped migrations (new migrations only) / docs/prompt.md / team-notes history.
+
+### mimo — Security + Invariants + Pagination hardening (2026-08-06, fix/core-hardening)
+
+**Issue 1 — Nested ticket-type authorization (scopeBindings):** ALREADY IMPLEMENTED in routes/web.php (lines 75-79). All 5 nested routes (edit/update/destroy/activate/deactivate) already have `->scopeBindings()`. No change needed.
+
+**Issue 1 defense-in-depth — TicketTypeController ownership guard:** ALREADY IMPLEMENTED. `ensureOwnership()` private method (line 139-142) calls `abort_unless($ticketType->event_id === $event->id, 404)` and is called in edit, update, destroy, activate, deactivate. No change needed.
+
+**Issue 7 — Public pagination normalization:** FIXED in `app/Http/Controllers/Public/EventController.php` line 90. Changed `$perPage = min((int) $request->input('per_page', 15), 50)` to `$perPage = max(1, min((int) $request->input('per_page', 15), 50))`. This ensures per_page=0,-1,abc all resolve to at least 1, and 999999 caps at 50.
+
+**Issue 7 — Admin pagination normalization:** FIXED in `app/Http/Controllers/Admin/EventController.php` line 140. Extracted `$perPage = max(1, min((int) $request->input('per_page', 15), 50))` and used it in `paginate($perPage)`.
+
+**Issue 3 — Event date invariants (UpdateEventRequest):** ALREADY IMPLEMENTED. withValidator checks `$this->input('starts_at') !== null && $startsAt->isPast()` → error on starts_at. No change needed.
+
+**Issue 3 — UpdateEventAction past-start guard:** ALREADY IMPLEMENTED. After date merge, `$startsAt->isPast()` throws RuntimeException('Cannot move the event start time into the past.'). No change needed.
+
+**Issue 7 — StoreTicketTypeRequest invariants:** ALREADY IMPLEMENTED. min/max/quantity cross-checks via closures, sales window validation present. No change needed.
+
+**Issue 7 — UpdateTicketTypeRequest effective-state invariants:** ALREADY IMPLEMENTED. withValidator checks effective min<=max, effective max<=quantity, effective min<=quantity, sales window effective-state validation. No change needed.
+
+**TESTS CREATED/MODIFIED (4 files):**
+
+1. `tests/Feature/TicketTypeTest.php` — Added 13 new tests for nested authorization:
+   - Same organizer + correct event/ticketType = allowed (edit/update/activate/deactivate/destroy — 5 tests)
+   - Same organizer + ticketType of ANOTHER event of same organizer = 404 (edit/update/delete/activate/deactivate — 5 tests)
+   - Organizer A + event A + ticketType of organizer B = 404 (edit/update/delete/activate/deactivate — 3 tests, but only 3 unique needed: cross-owner edit+update+delete, activate+deactivate same pattern)
+
+   Actually: 13 tests total (5 allowed + 5 cross-event + 3 cross-owner).
+
+2. `tests/Feature/EventLifecycleTest.php` — Added 5 new tests:
+   - future→future update allowed
+   - future→past starts_at rejected (422 via starts_at error)
+   - ends_at <= starts_at rejected
+   - valid partial update without date fields allowed
+   - already-started event still blocked
+
+3. `tests/Feature/TicketTypeInvariantsTest.php` — NEW, 15 tests:
+   - Store: min>max rejected, min>quantity rejected, valid accepted
+   - Update: lowering max below existing min rejected, raising min above existing max rejected, effective-state max below min rejected, effective-state min above max rejected
+   - Sales window: sales_start after existing sales_end rejected, sales_end before existing sales_start rejected, sales_end >= event.starts_at rejected
+   - Valid partial updates still allowed
+   - Allocated quantity protection still works
+   - Price lock still enforced
+
+4. `tests/Feature/PublicPaginationTest.php` — NEW, 9 tests:
+   - per_page=1 returns 1 result
+   - per_page=20 returns 20 results
+   - per_page=50 returns 50 results
+   - per_page=0 returns sane page size (1)
+   - per_page=-1 returns sane page size (1)
+   - per_page=999999 capped at 50
+   - per_page=abc returns sane page size (1)
+   - Admin per_page=0 returns 200
+   - Default per_page returns 15
+
+5. `tests/Feature/OrganizerEventsTest.php` — Updated 1 existing test assertion (line 173): `assertSessionHas('error')` → `assertSessionHasErrors('starts_at')` because the UpdateEventRequest validation now catches past starts_at before the action runs.
+
+**VERIFICATION RESULTS:**
+- Targeted tests: `php artisan test --compact --filter="TicketTypeTest|EventLifecycleTest|PublicPaginationTest|TicketTypeInvariantsTest"` → **69 passed (119 assertions)**
+- Full suite: `php artisan test --compact` → **390 passed (1137 assertions)**
+- Pint: auto-fixed PublicPaginationTest.php (fully_qualified_strict_types + ordered_imports), re-verified → 69/69 pass
+- No PHPStan changes needed (controller changes are minor arithmetic; no new app/ types)
+
+**FILES CHANGED:**
+1. `app/Http/Controllers/Public/EventController.php` — 1 line (pagination normalization)
+2. `app/Http/Controllers/Admin/EventController.php` — 2 lines (pagination normalization)
+3. `tests/Feature/TicketTypeTest.php` — +13 tests
+4. `tests/Feature/EventLifecycleTest.php` — +5 tests + 1 assertion fix
+5. `tests/Feature/TicketTypeInvariantsTest.php` — NEW (15 tests)
+6. `tests/Feature/PublicPaginationTest.php` — NEW (9 tests)
+7. `tests/Feature/OrganizerEventsTest.php` — 1 assertion fix
+
+**ANOMALIES:**
+- Issues 1-6 were already fully implemented by a previous round — only issue 7 (pagination) needed actual code changes.
+- PHP 8.4 requires 2 arguments for str_repeat() — initial test code used 1-arg form, caught and fixed.
+- The OrganizerEventsTest assertion change (error → validation error) is a behavioral consequence of the already-implemented UpdateEventRequest past-starts validation catching the issue earlier than the action.
+
+---
+# STATE SYNC 13 (2026-08-06) - CORE HARDENING COMPLETE
+
+## Status: ALL 3 PACKAGES LANDED + VERIFIED
+- Package A (mimo): security/dates/pagination - done, PHPStan-clean
+- Package B (big-pickle FAILED - empty result): taken over by build - done
+- Package C (build): bookings/expiry/mock-gate/README - done
+
+## Final verification (after all changes)
+- Pest: 414 passed / 1209 assertions (baseline 348/1064) - FULL SUITE GREEN
+- Pint: --dirty passes (one import fix in AsyncGenerationTest)
+- PHPStan: 0 errors (needs --memory-limit=1G on this machine; 128M default crashes worker)
+- npm run build: OK (6.74s)
+- Migration 2026_08_05_000000_add_input_payload_to_ai_generations_table: applied to dev DB
+
+## Key fixes landed (all 15 issues)
+- ISSUE 1: scopeBindings + ensureOwnership + cross-event 404 tests
+- ISSUE 2: ExpireBookings guarded conditional update (status+expiry re-check inside txn); BookingService::cancel lockForUpdate re-read; CancelEventAction ticket/payment cascades scoped via whereExists to bookings cancelled/expired
+- ISSUE 3: resulting starts_at must be future (request + action throw)
+- ISSUE 4: execute() rethrows transient failures (queue retries real), telemetry recorded, ai_invalid_response = permanent
+- ISSUE 5: input_payload persisted in DB (cache backfill); loadInputs reads DB first
+- ISSUE 6: max:event_context_max on draft + marketing requests
+- ISSUE 7: store/update invariant closures (min<=max<=qty, sales window, price lock)
+- ISSUE 8: per_page clamp 1..50 public+admin
+- ISSUE 9: 50 mojibake sequences fixed across 16 blades, no residues
+- ISSUE 10: app/Actions/Ai/* deleted (3 files, zero references); dump-autoload run
+- ISSUE 11: config/payments.php mock_confirm gate + controller 403 + checkout no-auto-confirm + view badge
+- ISSUE 12: round() on line totals/subtotal
+- ISSUE 13: routes left as-is (audit verdict: no split needed)
+- ISSUE 14: large classes documented, no risky refactor
+- ISSUE 15: README replaced
+
+## Gotchas learned (for future rounds)
+- Eloquent update() only writes dirty attrs: after a POST that mutates a row, refresh() before update() or the write is silently skipped (ExpireBookingsTest) - root-caused via debug test
+- throttle:10,1 counters persist across tests (array cache, shared process) - keep per-file request counts under limits
+- SQLite :memory: = no cross-connection interleaving; race tests simulate state-level both orderings
+- PHPStan on this machine needs --memory-limit=1G
+- Old Pint hang not reproduced this session (completed in seconds)
+- UsageRecordingTest rate-limit flake: fixed by faking the agent (it previously made real provider calls mid-test)
+- FakeTextGateway closure may return a raw string (TextResponse) - Agent::fake() top-level arg must be Closure|array
+
+## Next (if continued)
+- Final report (15 sections) is the remaining deliverable; logical commits staged per spec structure
