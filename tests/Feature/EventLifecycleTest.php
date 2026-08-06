@@ -210,4 +210,117 @@ class EventLifecycleTest extends TestCase
 
         $response->assertForbidden();
     }
+
+    // ── Event update lifecycle tests ──
+
+    public function test_future_to_future_update_allowed(): void
+    {
+        $event = Event::factory()->published()->create([
+            'organizer_id' => $this->organizer->id,
+            'starts_at' => now()->addDays(10),
+            'ends_at' => now()->addDays(10)->addHours(3),
+        ]);
+
+        $response = $this->actingAs($this->organizer)
+            ->patch(route('organizer.events.update', $event), [
+                'title' => 'Updated Title',
+                'description' => str_repeat('A long enough description for the validation rule to pass. ', 3),
+                'location' => 'Updated Location',
+                'city' => 'Updated City',
+                'format' => 'in_person',
+                'starts_at' => now()->addDays(15)->toDateTimeString(),
+                'ends_at' => now()->addDays(15)->addHours(3)->toDateTimeString(),
+                'category_id' => $event->category_id,
+            ]);
+
+        $response->assertRedirect();
+        $this->assertDatabaseHas('events', ['id' => $event->id, 'title' => 'Updated Title']);
+    }
+
+    public function test_future_to_past_starts_at_rejected(): void
+    {
+        $event = Event::factory()->published()->create([
+            'organizer_id' => $this->organizer->id,
+            'starts_at' => now()->addDays(10),
+            'ends_at' => now()->addDays(10)->addHours(3),
+        ]);
+
+        $response = $this->actingAs($this->organizer)
+            ->patch(route('organizer.events.update', $event), [
+                'description' => str_repeat('A long enough description for the validation rule to pass. ', 3),
+                'location' => 'Updated Location',
+                'city' => 'Updated City',
+                'format' => 'in_person',
+                'starts_at' => now()->subDays(1)->toDateTimeString(),
+                'ends_at' => now()->addDays(1)->toDateTimeString(),
+                'category_id' => $event->category_id,
+            ]);
+
+        $response->assertSessionHasErrors('starts_at');
+    }
+
+    public function test_ends_at_before_starts_at_rejected(): void
+    {
+        $event = Event::factory()->published()->create([
+            'organizer_id' => $this->organizer->id,
+            'starts_at' => now()->addDays(10),
+            'ends_at' => now()->addDays(10)->addHours(3),
+        ]);
+
+        $response = $this->actingAs($this->organizer)
+            ->patch(route('organizer.events.update', $event), [
+                'description' => str_repeat('A long enough description for the validation rule to pass. ', 3),
+                'location' => 'Updated Location',
+                'city' => 'Updated City',
+                'format' => 'in_person',
+                'starts_at' => now()->addDays(10)->toDateTimeString(),
+                'ends_at' => now()->addDays(9)->toDateTimeString(),
+                'category_id' => $event->category_id,
+            ]);
+
+        $response->assertSessionHasErrors('ends_at');
+    }
+
+    public function test_valid_partial_update_without_date_fields_allowed(): void
+    {
+        $event = Event::factory()->published()->create([
+            'organizer_id' => $this->organizer->id,
+            'starts_at' => now()->addDays(10),
+            'ends_at' => now()->addDays(10)->addHours(3),
+        ]);
+
+        $response = $this->actingAs($this->organizer)
+            ->patch(route('organizer.events.update', $event), [
+                'title' => 'Just Title Change',
+                'description' => str_repeat('A long enough description for the validation rule to pass. ', 3),
+                'location' => 'Updated Location',
+                'city' => 'Updated City',
+                'format' => 'in_person',
+                'category_id' => $event->category_id,
+            ]);
+
+        $response->assertRedirect();
+        $this->assertDatabaseHas('events', ['id' => $event->id, 'title' => 'Just Title Change']);
+    }
+
+    public function test_already_started_event_still_blocked(): void
+    {
+        $event = Event::factory()->published()->started()->create([
+            'organizer_id' => $this->organizer->id,
+        ]);
+
+        $response = $this->actingAs($this->organizer)
+            ->patch(route('organizer.events.update', $event), [
+                'title' => 'Should Not Work',
+                'description' => str_repeat('A long enough description for the validation rule to pass. ', 3),
+                'location' => 'Updated Location',
+                'city' => 'Updated City',
+                'format' => 'in_person',
+                'starts_at' => now()->addDays(20)->toDateTimeString(),
+                'ends_at' => now()->addDays(20)->addHours(3)->toDateTimeString(),
+                'category_id' => $event->category_id,
+            ]);
+
+        $response->assertSessionHas('error');
+    }
 }

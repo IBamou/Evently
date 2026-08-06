@@ -49,6 +49,11 @@ class UpdateEventAction
         /** @var Carbon $startsAt */
         $startsAt = $data['starts_at'];
 
+        // Prevent moving the start time into the past.
+        if ($startsAt->isPast()) {
+            throw new RuntimeException('Cannot move the event start time into the past.');
+        }
+
         // Verify ends_at strictly after starts_at
         if ($endsAt->lte($startsAt)) {
             throw new RuntimeException('End time must be after start time.');

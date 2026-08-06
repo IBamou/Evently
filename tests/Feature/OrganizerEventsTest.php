@@ -170,7 +170,7 @@ class OrganizerEventsTest extends TestCase
                 'ends_at' => $event->ends_at->toDateTimeString(),
             ]);
 
-        $response->assertSessionHas('error');
+        $response->assertSessionHasErrors('starts_at');
         $this->assertDatabaseHas('events', ['id' => $event->id, 'title' => $event->title]);
     }
 

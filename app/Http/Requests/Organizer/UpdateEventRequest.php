@@ -57,6 +57,11 @@ class UpdateEventRequest extends FormRequest
             $startsAt = $this->input('starts_at') ? Carbon::parse($this->input('starts_at')) : $event->starts_at;
             $endsAt = $this->input('ends_at') ? Carbon::parse($this->input('ends_at')) : $event->ends_at;
 
+            // The resulting start time must be in the future.
+            if ($this->input('starts_at') !== null && $startsAt instanceof Carbon && $startsAt->isPast()) {
+                $validator->errors()->add('starts_at', 'The start time must be in the future.');
+            }
+
             if ($startsAt instanceof Carbon && $endsAt instanceof Carbon && $endsAt->lte($startsAt)) {
                 $validator->errors()->add('ends_at', 'The end time must be after the start time.');
             }
