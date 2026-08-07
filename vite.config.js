@@ -6,8 +6,8 @@ const viteHmrHost = process.env.VITE_HMR_HOST ?? 'localhost';
 
 export default defineConfig({
     server: {
-        origin: `http://${viteHmrHost}:${vitePort}`,
         strictPort: true,
+        cors: true,
         hmr: {
             host: viteHmrHost,
             clientPort: vitePort,

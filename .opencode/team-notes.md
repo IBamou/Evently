@@ -9,22 +9,21 @@ Rules:
 
 ## Current Goal
 
-**Port the user's design (design-evently-home.html, project root) into Blade — EXACT same views, sizes, spacing, colors.** User's proof-of-value request: Blade+Tailwind can replicate the design pixel-perfect.
+**Mobile door experience (executes `docs/prompt.md`)** on branch `feat/mobile-door-experience` (created from `fix/core-hardening`). Two tracks: (1) organizer mobile door check-in, (2) attendee ticket presentation page; plus final booking-expiration concurrency correction (`ExpireBookings` vs `confirmPayment`).
 
-**USER DIRECTIVE (latest):** UI ONLY — no DB, no migrations, no models, no routes/logic. All views come 1:1 from the design file. Static demo data inside views is fine (design's own sample data: BK-4C19A7, Yassine Benali, etc.). build will add minimal static preview routes at merge time so pages are viewable.
+**SCOPE HARD-LIMITS (do NOT implement/investigate, do NOT report as missing):** HTTPS/Herd secure|share/LAN access/deployment/hosting/domains/PWA/service workers/offline sync/wake lock/brightness APIs/real payments (Stripe/CMI/Payzone)/push notifications. No new deps, no React/Vue/Inertia, no new JS test framework. Laravel+Blade+Alpine/vanilla only.
 
-**ROLE SYSTEM:** Design's top banners = role previews (guest/user/organizer/admin). The design NEVER shows a sidebar (sidebarOn:false, navGroups:[]) — role differences are in the HEADER top-nav:
-- guest: Events · Sign in · Create account (start view: events)
-- user: Events · My bookings · My tickets · Profile (start: events)
-- organizer: Dashboard · My events · Check-in · Browse · Profile (start: odash)
-- admin: Admin · Dashboard · Check-in · Browse · Profile (start: admin)
-- Avatars: guest G gray #5B7794→#8FAAC6 · user YB blue #0EA5E9→#1565D8 · organizer SL purple #7C3AED→#1565D8 · admin AD red #DC2626→#F59E0B
-- Keep the role-tabs preview strip (like the design) so user can click through roles' views.
-- Page headings: 28px/800/ls-.9px h1. Auth pages: 2-col (form max-w 400, h1 30px/800 + decorative right panel).
+**BASELINE (recorded 2026-08-06, pre-edit, all green):** Pest 414 passed / 1209 assertions; PHPStan 0 errors (`--memory-limit=1G`); `npm run build` OK; Pint `--test` hangs on this machine (2×timeout) → use `vendor/bin/pint --dirty --format agent` instead and note it.
 
-**WORKFLOW RULE (user mandate):** The 3 of us work TOGETHER — teammates don't just implement. Every round: ALL teammates ANALYZE first, share ideas/considerations on the blackboard, THEN implement informed by the discussion. build merges ideas into decisions.
+**CONFIRMED FINDINGS (verified in code):** `qr.js` `autoStopOnSuccess=true` no re-arm → check-in view must call `handle.start()` after scan feedback; manual input has `autofocus` (remove — mobile keyboard on load); check-in grid `minmax(0,1fr) 340px` inline, zero page media queries; `layouts/app.blade.php` has 900/640px header rules only + footer "Powered by Stripe" (line 193, remove — mock mode, false copy); `tickets/index.blade.php` line 13 "Works offline." (remove); `bookings/show.blade.php` line 80 "Payment completed via Stripe" (make neutral "Payment confirmed"); `TicketController` has only `index()` → add `show()` + `GET /tickets/{ticket}` owner-scoped; `ExpireBookings` = read-IDs-then-update-IDs + `$count += $candidateIds->count()` (counts candidates not transitions) → replace with authoritative DB-level guarded update + real transition count; `BookingsController::confirmPayment` uses row lock + status/expiry checks (good — serialize ExpireBookings against it).
 
-Round 5 (implementation, UI only): mimo = guest+user views; big-pickle = layout overhaul + organizer/admin views.
+**FILE OWNERSHIP (do not edit outside your map):**
+- **mimo:** `resources/views/organizer/check-in/{index,picker}.blade.php`, `resources/js/qr.js`, `resources/css/app.css` (door/scan section only), `tests/Feature/CheckInTest.php` (+ new `MobileCheckInTest` if needed).
+- **big-pickle:** `app/Http/Controllers/User/TicketController.php`, `routes/web.php` (tickets route only), `resources/views/tickets/{index,show}.blade.php` (new show), `resources/views/bookings/show.blade.php` (ticket presentation + Stripe activity line only), `tests/Feature/TicketPresentationTest.php` (new).
+- **build:** `app/Console/Commands/ExpireBookings.php`, `app/Services/BookingService.php` (if needed), `tests/Feature/ExpireBookingsTest.php`, `resources/views/layouts/app.blade.php` (footer + focus-mode), `resources/css/app.css` (shared/global section), final integration/review/verification/report.
+- Shared reads (no edits): `AGENTS.md`, `routes/web.php` (non-ticket routes), `database/migrations`, `config/payments.php`.
+
+**DISPATCH STATUS:** Round 1 dispatched to mimo + big-pickle in parallel 2026-08-06; build working ExpireBookings concurrently. Teammates: report back with changed-file list + test results; build reviews all diffs critically before merge.
 
 ## Ideas
 
@@ -317,6 +316,23 @@ Did NOT touch confirm-modal partial, layout, tests, controllers, routes. **view:
 - Mobile: no media queries exist; propose hiding role-tabs strip <960px + horizontal-scroll nav <900px (66px bar kept).
 - SidebarTest.php (7 tests asserting ev-sb markup) must be rewritten → HeaderNavTest (needs approval).
 - 16 views to strip `:workspace="true"` (listed in report); keep all view-internal breadcrumb/back links; keep `@isset($header)` for Breeze dashboard.
+
+### mimo — Organizer mobile door check-in (2026-08-06, feat/mobile-door-experience)
+
+**Files changed (5):**
+1. `resources/views/organizer/check-in/index.blade.php` — **MAJOR REWORK**: Alpine.js state machine (idle→starting→ready→processing→success|warning|error + camera_unavailable), focusMode layout prop, compact mobile context header (back link + "Door mode" + event title + "city · Tonight"), responsive 2-col desktop / stacked mobile via `door-*` CSS classes, strong result UX (✓ CHECKED IN green / ! ALREADY CHECKED IN amber / ✕ TICKET NOT VALID red + network error), shared in-flight guard (camera + manual share `processing` flag), re-arm scanner after 1200ms cooldown, 3s dedup guard for same QR code, manual entry as expandable `<details>`-style toggle (focus-on-open, no autofocus), `role="status"`/`role="alert"` + `aria-live="polite"` on result regions, dismiss button 44px+, all touch targets ≥44px, `escapeHtml` for all server strings, kept flash fallback for no-JS.
+2. `resources/views/organizer/check-in/picker.blade.php` — Compact stats summary ("214 / 246 checked in 87%" + progress bar replaces 3 separate rows), CTA text "Open check-in" → "Open door mode", responsive grid `min(280px,100%)` prevents 375px overflow.
+3. `resources/js/qr.js` — `qrbox` default changed from fixed `250` to responsive function `(vfW,vfH) => min(250, floor(min(vfW,vfH)*0.72))`, scanner.start() now handles both function and number `qrbox`. Public API (`renderQrCode`, `initCameraScanner`, `showQrFallback`) unchanged.
+4. `resources/css/app.css` — APPENDED `/* Door check-in (mobile) */` section (~120 lines): `door-page`, `door-context-header`, `door-desktop-header`, `door-layout`, `door-scanner`, `door-viewfinder`, `door-result`, `door-manual`, `door-stats`, `door-recent` classes + `@media (min-width:1024px)` desktop grid override. No existing rules modified.
+5. `tests/Feature/MobileCheckInTest.php` — NEW, 13 tests (38 assertions): camera container, manual fallback, no autofocus, door context header, focusMode layout, door-viewfinder classes, door stats, result region markup, state machine markup, manual label, door-layout classes, picker compact format, picker responsive grid.
+
+**Test results:** CheckInTest 14 passed + MobileCheckInTest 13 passed = 27 total (70 assertions), all green. Pint clean. npm build clean.
+
+**Scanner state machine:** idle → starting → ready → processing → success|warning|error → (1200ms cooldown) → ready. camera_unavailable on error. Shared `processing` flag blocks camera + manual simultaneously.
+
+**Re-arm mechanism:** After fetch completes → `processing = false` → `reArmScanner()` sets 1200ms timeout → calls `scannerHandle.start()` → state = 'ready'. Same code within 3s ignored via `lastCode`/`lastCodeTime` dedup.
+
+**Deviations from spec:** None. All spec requirements #4-#20, #29-#31 implemented.
 
 ## Open Questions
 
@@ -2253,3 +2269,56 @@ Moved the layout-critical flex styles into the CSS classes (which Alpine's `:sty
 
 ## Next (if continued)
 - Final report (15 sections) is the remaining deliverable; logical commits staged per spec structure
+
+### big-pickle — Mobile door round 1: attendee ticket presentation (2026-08-06, feat/mobile-door-experience)
+
+**Files changed (exactly my scope):**
+1. `routes/web.php` — `GET /tickets/{ticket}` → `TicketController@show` (name `tickets.show`), added inside the `['auth','role:user']` group right after `tickets.index`.
+2. `app/Http/Controllers/User/TicketController.php` — added `show(Ticket $ticket): View`. Ownership guard `if ($ticket->user_id !== $user->id) abort(404)` (no existence disclosure). Eager-loads `event.category:id,name,slug`, `ticketType:id,name`, `booking:id,reference`, `user:id,name`. Prev/next chain: siblings by `user_id + event_id`, `orderBy('id')`, passes `previousId`/`nextId`/`position`/`total` (1-based position).
+3. `resources/views/tickets/show.blade.php` — NEW presentation page (`<x-app-layout :activeNav="'tickets'" focusMode>`, max-w 460px): back link, gradient event band (category/title/date/city via `Helper::categoryGradient`), white QR surface `min(260px,70vw)` (muted at .45 when not valid), monospace code, type+holder, status badge (same colors as index), status-aware messages (valid: checkmark "Valid · Ready for check-in"; used: alert + checked_in_at; cancelled: alert), booking reference, prev/next nav (44px links, disabled spans, "Ticket N of M"), `@vite('resources/js/qr.js')` + DOMContentLoaded script using `renderQrCode(el, code, { size: min(260, container width) })` with `.catch → showQrFallback` and `data-qrRendered` guard.
+4. `resources/views/tickets/index.blade.php` — rows are now `<a href="{{ route('tickets.show', $ticket) }}">` with `flex-wrap:wrap` + info column `flex:1 1 55%;min-width:0` (no 375px overflow), badge + "Show ticket ›" affordance right-aligned (wraps to 2nd line on narrow), copy "Works offline." → "Show the QR code at the door.", 104px QR kept inside the link.
+5. `resources/views/bookings/show.blade.php` — per-ticket "Show ticket →" outline button (min-height 44px) + row flex-wrap; "Payment completed via Stripe" → "Payment confirmed". 60px QR previews kept.
+6. `tests/Feature/TicketPresentationTest.php` — NEW, 9 tests / 59 assertions: guest redirect (direct ticket create, since actingAs persists across requests in a test — gotcha), owner 200 + QR attr + code/type/title + "Ticket 1 of 1", IDOR 404, used message with time, cancelled message, prev/next ordering + disabled edges (assert via route URLs), chain scoped to same user+event (foreign ticket never linked), index copy/link assertions, bookings/show "Show ticket"/"Payment confirmed"/no old Stripe copy.
+
+**Verification:** TicketPresentationTest 9/9 ✓; regression `TicketTest|BookingTest|CancellationTest|BookingCheckoutPageTest` 55/55 ✓; `PaymentTest|CheckInTest` 24/24 ✓; `pint --dirty` clean (fixed 1 `fully_qualified_strict_types` in controller); `npm run build` OK (qr chunk 4.00 kB).
+
+**Browser-verified (http://evently.test, test@example.com):** /tickets/4 (valid) + /tickets/1 (used) + /tickets/11 (cancelled) all render correctly at 375px emulation — no horizontal overflow anywhere; used/cancelled messages + badges correct; prev/next correct; index rows wrap cleanly (QR line 1, badge+Show ticket line 2); bookings/2 shows "Show ticket" links + "Payment confirmed". QR canvas rendering verified against the BUILT qr chunk (renderQrCode 260px → 27k dark pixels).
+
+**⚠️ Environment issue (not mine, needs build/mimo action):** the running Vite dev server (`localhost:5173`) CORS-blocks `evently.test` origin → `@vite` scripts/CSS fail to load in-browser (my JS/CSS still verified via the built assets). vite.config.js sets `server.origin: http://localhost:5173` + strictPort. Suggested fix: set `VITE_HMR_HOST=evently.test` in .env (or `server.allowedHosts` in vite.config.js) and restart dev server.
+
+**Open questions:** (1) `show()` chain includes all statuses (valid+used+cancelled) — matches "same event, ordered by id"; confirm OK. (2) Prev/next is per-event not per-booking — deliberate (spec #27 same-event navigation). (3) Nothing new in `routes/web.php` beyond the one line.
+
+### build — MOBILE DOOR EXPERIENCE COMPLETE + COMMITTED (2026-08-06, feat/mobile-door-experience)
+
+**All tracks merged, reviewed, verified, committed (4 commits on branch, NOT pushed):**
+- `83f424e` fix: ExpireBookings serialization (row locks, guarded UPDATE, real transition count, DB::beforeExecuting mid-run tests)
+- `1dbb860` feat: mobile door check-in (mimo — Alpine state machine, focus chrome, door CSS, qrbox fn, 13 tests)
+- `7bca6d8` feat: ticket presentation (big-pickle — tickets.show, IDOR 404, prev/next, focus layout prop, 9 tests) + layout focusMode (build) + Stripe/Works-offline copy removal
+- `fb381c5` fix: spec 39 — published-only door check-in (page redirects to picker w/ banner; scan rejects draft/under_review `event_not_open`; 4 new tests; CheckInTest now 18)
+
+**Final gates:** 438 tests / 1316 assertions PASS; PHPStan 0; Pint clean; `npm run build` OK. CheckInTest 18 (incl. 4 new spec-39 tests) + MobileCheckIn 13 + TicketPresentation 9 + ExpireBookings 8 all green.
+
+**Browser-verified (chrome-devtools MCP) at 375/390/430/768/1280:** presentation (QR 260px centered, focus collapse ≤768, footer w/o Stripe, nav "Ticket 5 of 11" prev/next), picker 375 (5 cards, CTA), door 375 (4:3 viewfinder, camera_unavailable state, manual focus-on-open, error flow cancelled ticket role=alert, success flow stat 3→4 + recent scans role=status), door 1280 (2-col 688+340, desktop header, inline manual), tickets index 375 (rows link + QR render), no horizontal overflow anywhere.
+
+**Env notes:** (1) Vite dev server (`server.origin: localhost:5173`) CORS-blocks evently.test — build killed PID 10220 + deleted stale `public/hot`; assets now serve from `public/build`. Don't restart that dev server unconfigured. (2) focus-header media rule needs `!important` (header inline display:flex beats plain CSS). (3) `docs/prompt.md` left untracked as before. (4) Checked-in T-GA00000001 (demo ticket, stat now 4) — harmless demo data.
+
+**Remaining for later rounds (out of scope, not defects):** real camera scan (no camera in this browser; state machine + tests cover), HTTPS/camera on real phones, offline/PWA per scope limits.
+
+### build - Switched dev runtime back to Docker (2026-08-07)
+- Stack: compose.yaml (Sail 8.4): laravel.test :8080, mysql (host 3307), redis, mailpit, queue+scheduler. Skipped vite (built assets in public/build; add with compose up -d vite).
+- .env re-pointed for containers: DB_HOST=mysql, DB_USERNAME=sail/DB_PASSWORD=password, APP_URL=http://localhost:8080, FORWARD_DB_PORT=3307 (Herd MySQL stays on 3306). Backup of pre-switch .env at .env.herd-backup.
+- Data intact: evently_sail-mysql volume - 3 users / 5 events / 6 tickets; site verified 200 + login + door page on localhost:8080.
+- Test proxy (X-Forwarded-*) provider attempt REVERTED (Laravel root = config in tests; behavior untestable here, ngrok dropped). Tree clean at 442 tests.
+- Phone preview = http://<LAN-IP>:8080 works (request-host URLs); camera scanning needs HTTPS (only if ngrok returns).
+- vite now running too (compose up -d brings it): public/hot active, assets served from :5173, HMR live. Phone/LAN preview needs vite stopped + public/hot removed (dev URLs are localhost-bound).
+
+### build - Docker+Vite CORS fix + perf tuning (2026-08-07, later)
+- **CORS fix:** removed `server.origin: http://${viteHmrHost}:${vitePort}` from `vite.config.js`; `server.cors: true` (default) now emits `Access-Control-Allow-Origin: *`. Browser verified: no CORS errors, @vite/client + app.js + app.css all 304 from :5173, HMR ok, zero console errors.
+- Container flakiness observed: engine restarted twice (all containers exit 0 simultaneously, mysql/vite identical StartedAt) — Docker Desktop/WSL2 hiccup, recovered with `docker compose up -d`; app unaffected.
+- **Perf:** laravel.test serves via `php artisan serve --port=80` (CLI SAPI, Laravel 13 workers) — bind-mount stat storms made pages 6-18s. Fix: wrote `/etc/php/8.4/cli/conf.d/zz-evently-performance.ini` → `opcache.validate_timestamps=0`; also ran `php artisan optimize` (config/routes/events/views cached, took 58s once). Now warm pages ~0.8-1s (first hit after restart ~32s = one-time compile). **Caveat:** PHP edits + config/route changes require `docker compose restart laravel.test` (opcache doesn't revalidate; artisan caches hold) — fine for local demo, note for dev loop.
+- Do NOT run `docker compose exec` with `--execute '...'` quoting; use `sh -c "..."` (PS quoting).
+
+### build - ngrok phone preview live (2026-08-07, final)
+- ngrok tunnel active: `https://nappy-cattail-trough.ngrok-free.dev` -> localhost:8080. All demo users (test@example.com / demo-organizer@evently.test / demo-admin@evently.test) have password `password`.
+- **Before phone preview:** `docker compose stop vite` + delete `public/hot` (done) so assets come from `public/build`; page through ngrok previously emitted **http** asset/form URLs (trusted-proxies not configured) → mixed-content blocked on https. Fixed: `bootstrap/app.php` now `$middleware->trustProxies(at: '*')` (X-Forwarded-Proto honored). Verified: assets + login action + POST login through ngrok all https, login redirects to dashboard. Code change → container restarted (opcache).
+- **Restoring local dev later:** `docker compose up -d vite` recreates `public/hot` (dev server auto-writes it); remove it again for future phone sessions.
