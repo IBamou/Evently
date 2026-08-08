@@ -159,22 +159,63 @@
                 <a href="{{ route('events.index') }}" style="border:0;background:none;cursor:pointer;font-size:13px;font-weight:700;color:var(--primary);text-decoration:none">View all</a>
             </div>
 
-            <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px">
-                @foreach ($featured as $event)
-                    <article class="ev-card" onclick="location.href='{{ $detailUrl($event) }}'" style="border:1px solid var(--border);border-radius:16px;overflow:hidden;background:var(--surface);cursor:pointer">
-                        <div style="position:relative;height:150px;background:{{ $coverBg($event) }}">
-                            <span style="position:absolute;bottom:11px;left:11px;padding:5px 10px;border-radius:8px;background:rgba(255,255,255,.92);color:#0B2545;font-size:10.5px;font-weight:800;letter-spacing:.5px;text-transform:uppercase">{{ $event->category?->name ?? 'Event' }}</span>
+            {{-- Infinite horizontal marquee: auto-scrolls, loops back to the first
+                 event at the end (e-commerce style). Track shows each card twice so
+                 the reset is seamless. Pauses on hover / touch, honors reduced
+                 motion, and cards stay clickable. --}}
+            <div id="featured-wrap" style="overflow:hidden;position:relative;padding:2px 2px 10px">
+                <div id="featured-track" style="display:flex;gap:16px;width:max-content;will-change:transform">
+                    @foreach ([1, 2] as $copy)
+                        <div style="display:flex;gap:16px;flex:0 0 auto">
+                            @foreach ($featured as $event)
+                                <article class="ev-card" onclick="location.href='{{ $detailUrl($event) }}'" style="width:300px;border:1px solid var(--border);border-radius:16px;overflow:hidden;background:var(--surface);cursor:pointer">
+                                    <div style="position:relative;height:150px;background:{{ $coverBg($event) }}">
+                                        <span style="position:absolute;bottom:11px;left:11px;padding:5px 10px;border-radius:8px;background:rgba(255,255,255,.92);color:#0B2545;font-size:10.5px;font-weight:800;letter-spacing:.5px;text-transform:uppercase">{{ $event->category?->name ?? 'Event' }}</span>
+                                    </div>
+                                    <div style="padding:14px">
+                                        <h3 style="margin:0 0 9px;font-size:15px;font-weight:700;letter-spacing:-.2px;line-height:1.3">{{ $event->title }}</h3>
+                                        <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);font-weight:600;margin-bottom:10px;flex-wrap:wrap">
+                                            <span>{{ $cardDate($event) }}</span><span style="opacity:.5">·</span><span>{{ $event->city }}</span>
+                                        </div>
+                                        <div style="font-size:13px;font-weight:800;color:var(--primary)">{{ $event->format?->label() ?? 'In person' }}</div>
+                                    </div>
+                                </article>
+                            @endforeach
                         </div>
-                        <div style="padding:14px">
-                            <h3 style="margin:0 0 9px;font-size:15px;font-weight:700;letter-spacing:-.2px;line-height:1.3">{{ $event->title }}</h3>
-                            <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);font-weight:600;margin-bottom:10px;flex-wrap:wrap">
-                                <span>{{ $cardDate($event) }}</span><span style="opacity:.5">·</span><span>{{ $event->city }}</span>
-                            </div>
-                            <div style="font-size:13px;font-weight:800;color:var(--primary)">{{ $event->format?->label() ?? 'In person' }}</div>
-                        </div>
-                    </article>
-                @endforeach
+                    @endforeach
+                </div>
             </div>
+
+            <script>
+                (function () {
+                    var wrap = document.getElementById('featured-wrap');
+                    var track = document.getElementById('featured-track');
+                    if (!wrap || !track || track.children.length < 2) return;
+
+                    var half = track.children[0].offsetWidth + 16; // first copy + gap
+                    var speed = 0.7; // px per frame (~42px/s)
+                    var paused = false;
+
+                    var reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+                    wrap.addEventListener('mouseenter', function () { paused = true; });
+                    wrap.addEventListener('mouseleave', function () { paused = false; });
+                    wrap.addEventListener('touchstart', function () { paused = true; }, { passive: true });
+                    wrap.addEventListener('touchend', function () { paused = false; }, { passive: true });
+
+                    function step() {
+                        if (!paused && !reduced) {
+                            var x = parseFloat(track.style.transform.replace(/[^0-9\-.,]/g, '')) || 0;
+                            x -= speed;
+                            if (x <= -half) { x += half; } // seamless loop back to the first event
+                            track.style.transform = 'translateX(' + x + 'px)';
+                        }
+                        window.requestAnimationFrame(step);
+                    }
+
+                    window.requestAnimationFrame(step);
+                })();
+            </script>
         </div>
     </section>
 

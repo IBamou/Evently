@@ -90,13 +90,12 @@ class EventController extends Controller
         $perPage = max(1, min((int) $request->input('per_page', 15), 50));
         $events = $query->paginate($perPage);
 
-        // Featured: upcoming published ordered by starts_at, take 3
+        // Featured: all upcoming published events (horizontal scroll on home page)
         $featured = Event::query()
             ->where('status', EventStatus::Published)
             ->whereNull('deleted_at')
             ->where('starts_at', '>', now())
             ->orderBy('starts_at')
-            ->limit(3)
             ->with(['organizer:id,name', 'category:id,name,slug'])
             ->get();
 

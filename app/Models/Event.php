@@ -37,6 +37,7 @@ class Event extends Model
     use HasFactory, SoftDeletes;
 
     protected $fillable = [
+        'organizer_id',
         'category_id',
         'title',
         'slug',

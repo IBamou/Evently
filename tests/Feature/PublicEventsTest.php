@@ -179,8 +179,9 @@ class PublicEventsTest extends TestCase
         $this->assertEquals(['Casablanca', 'Rabat'], $cities->sort()->values()->toArray());
     }
 
-    public function test_public_index_featured_capped_at_three(): void
+    public function test_public_index_featured_includes_all_upcoming(): void
     {
+        // Six upcoming published events -> all should be in featured
         Event::factory()->published()->count(6)->create([
             'starts_at' => now()->addDays(rand(1, 30)),
         ]);
@@ -189,7 +190,7 @@ class PublicEventsTest extends TestCase
         $response->assertOk();
 
         $featured = $response->viewData('featured');
-        $this->assertLessThanOrEqual(3, $featured->count());
+        $this->assertCount(6, $featured);
     }
 
     public function test_public_index_per_page_defaults_to_15(): void
