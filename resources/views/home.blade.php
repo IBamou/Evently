@@ -66,11 +66,26 @@
         ],
     ];
 
+    // Card banner URL resized for the rendered size (~150px tall card):
+    // rewrite imgix "w=" params down (full-res originals cost 2-7MB each and
+    // decode at 5-7k px on the main thread). URLs without a w= param are
+    // passed through untouched (custom uploads).
+    $bannerUrl = function (?string $url, int $width = 600): ?string {
+        if (! $url) {
+            return null;
+        }
+
+        return preg_replace('/w=\d+/', 'w=' . $width, $url) ?? $url;
+    };
+
     // Cover background: real banner image when uploaded, otherwise the category
-    // gradient from the shared helper (App\Helpers\Helper — was duplicated here).
-    $coverBg = function ($event) {
-        if ($event->banner_url) {
-            return "url('" . e($event->banner_url) . "') center/cover";
+    // gradient from the shared helper. The URL must escape exactly once (Blade
+    // {{ }} already escapes); e() here would double-escape & into &amp;amp;
+    // and break the imgix w= param, forcing full-resolution downloads.
+    $coverBg = function ($event) use ($bannerUrl) {
+        $src = $bannerUrl($event->banner_url);
+        if ($src) {
+            return "url('" . $src . "') center/cover";
         }
         return Helper::categoryGradient($event->category?->slug) ?? 'linear-gradient(135deg,var(--primary),var(--cyan))';
     };
@@ -124,8 +139,8 @@
                     <form method="GET" action="{{ route('events.index') }}" style="background:var(--surface);border:1px solid var(--border);border-radius:18px;box-shadow:var(--shadow);padding:14px;display:flex;gap:10px;align-items:center;margin:0">
 
                         <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2" stroke-linecap="round" style="margin-left:6px;flex:0 0 auto"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg>
-                        <input type="text" name="search" value="{{ $filters['search'] ?? '' }}" class="needs-focus" placeholder="Search events, categories or venues…" aria-label="Search events" style="flex:1;min-width:0;border:0;background:none;font-size:15px;padding:8px 0;outline:none">
-                        <button type="submit" style="border:0;cursor:pointer;background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:#fff;font-weight:700;font-size:14px;padding:12px 22px;border-radius:12px;min-height:44px">Search</button>
+                        <input type="text" name="search" value="{{ $filters['search'] ?? '' }}" placeholder="Search events, categories or venues…" aria-label="Search events" style="flex:1;min-width:0;border:0;background:none;font-size:15px;padding:8px 0;outline:none">
+                        <button type="submit" style="border:0;cursor:pointer;background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:#fff;font-weight:700;font-size:14px;padding:12px 22px;border-radius:12px;min-height:44px;outline:none">Search</button>
                     </form>
                     <div style="display:flex;gap:9px;flex-wrap:wrap;margin-top:14px">
                         @foreach ($heroChips as $chip)
@@ -169,7 +184,10 @@
                         <div style="display:flex;gap:16px;flex:0 0 auto">
                             @foreach ($featured as $event)
                                 <article class="ev-card" onclick="location.href='{{ $detailUrl($event) }}'" style="width:300px;border:1px solid var(--border);border-radius:16px;overflow:hidden;background:var(--surface);cursor:pointer">
-                                    <div style="position:relative;height:150px;background:{{ $coverBg($event) }}">
+                                    <div style="position:relative;height:150px;background:{{ $coverBg($event) }};background-size:cover">
+                                        @if ($event->banner_url)
+                                            <img src="{{ $bannerUrl($event->banner_url) }}" alt="{{ $event->title }}" loading="lazy" decoding="async" width="600" height="400" @if ($copy === 1 && $loop->first) fetchpriority="high" @endif style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block">
+                                        @endif
                                         <span style="position:absolute;bottom:11px;left:11px;padding:5px 10px;border-radius:8px;background:rgba(255,255,255,.92);color:#0B2545;font-size:10.5px;font-weight:800;letter-spacing:.5px;text-transform:uppercase">{{ $event->category?->name ?? 'Event' }}</span>
                                     </div>
                                     <div style="padding:14px">
@@ -198,13 +216,22 @@
 
                     var reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
+                    // Pause the marquee while it is scrolled out of view so the
+                    // animation does not burn CPU/GPU and fight page scrolling.
+                    var onScreen = true;
+                    if ('IntersectionObserver' in window) {
+                        new IntersectionObserver(function (entries) {
+                            onScreen = entries[0].isIntersecting;
+                        }, { rootMargin: '150px' }).observe(wrap);
+                    }
+
                     wrap.addEventListener('mouseenter', function () { paused = true; });
                     wrap.addEventListener('mouseleave', function () { paused = false; });
                     wrap.addEventListener('touchstart', function () { paused = true; }, { passive: true });
                     wrap.addEventListener('touchend', function () { paused = false; }, { passive: true });
 
                     function step() {
-                        if (!paused && !reduced) {
+                        if (!paused && !reduced && onScreen) {
                             var x = parseFloat(track.style.transform.replace(/[^0-9\-.,]/g, '')) || 0;
                             x -= speed;
                             if (x <= -half) { x += half; } // seamless loop back to the first event
@@ -215,12 +242,26 @@
 
                     window.requestAnimationFrame(step);
                 })();
+
+                // When arriving from a search, bring the results section into
+                // view instead of leaving the visitor staring at the hero.
+                document.addEventListener('DOMContentLoaded', function () {
+                    var search = new URLSearchParams(window.location.search).get('search');
+                    var target = document.getElementById('all-events');
+                    if (!search || !search.trim() || !target) return;
+
+                    var reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+                    window.scrollTo({
+                        top: target.getBoundingClientRect().top + window.scrollY - 84,
+                        behavior: reduced ? 'auto' : 'smooth',
+                    });
+                });
             </script>
         </div>
     </section>
 
     {{-- ===================== ALL EVENTS ===================== --}}
-    <section aria-label="All events" style="max-width:1380px;margin:0 auto;padding:32px 26px 60px;display:grid;grid-template-columns:262px minmax(0,1fr);gap:26px;align-items:start">
+    <section id="all-events" aria-label="All events" style="scroll-margin-top:84px;max-width:1380px;margin:0 auto;padding:32px 26px 60px;display:grid;grid-template-columns:262px minmax(0,1fr);gap:26px;align-items:start">
         <aside style="background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:18px;position:sticky;top:82px">
             <div style="display:flex;align-items:center;gap:9px;margin-bottom:16px">
                 <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M4 6h16M7 12h10M10 18h4"></path></svg>
@@ -303,8 +344,11 @@
             @else
                 <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px">
                     @foreach ($events as $event)
-                        <article class="ev-card" onclick="location.href='{{ $detailUrl($event) }}'" style="border:1px solid var(--border);border-radius:16px;overflow:hidden;background:var(--surface);cursor:pointer">
-                            <div style="position:relative;height:168px;background:{{ $coverBg($event) }}">
+                        <article class="ev-card" onclick="location.href='{{ $detailUrl($event) }}'" style="border:1px solid var(--border);border-radius:16px;overflow:hidden;background:var(--surface);cursor:pointer;content-visibility:auto;contain-intrinsic-size:auto 380px">
+                            <div style="position:relative;height:168px;background:{{ $coverBg($event) }};background-size:cover">
+                                @if ($event->banner_url)
+                                    <img src="{{ $bannerUrl($event->banner_url) }}" alt="{{ $event->title }}" loading="lazy" decoding="async" width="600" height="400" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block">
+                                @endif
                                 <span style="position:absolute;top:11px;left:11px;padding:5px 10px;border-radius:8px;background:rgba(255,255,255,.93);color:#0B2545;font-size:10.5px;font-weight:800;letter-spacing:.5px;text-transform:uppercase">{{ $event->category?->name ?? 'Event' }}</span>
                             </div>
                             <div style="padding:16px;flex:1;display:flex;flex-direction:column;gap:10px">
@@ -348,15 +392,6 @@
                 <h2 style="margin:0 0 6px;color:#fff;font-size:24px;font-weight:800;letter-spacing:-.6px">Stay in the loop</h2>
                 <p style="margin:0;color:rgba(255,255,255,.82);font-size:14px">New events in Casablanca, Rabat and Marrakech &mdash; straight to your inbox.</p>
             </div>
-
-            {{-- Email input + button --}}
-            <form method="POST" action="{{ route('newsletter.store') }}" style="position:relative;display:flex;gap:10px;background:rgba(255,255,255,.14);padding:8px;border-radius:14px;border:1px solid rgba(255,255,255,.28);margin:0">
-                @csrf
-                <input type="email" name="email" value="{{ old('email') }}" required placeholder="Enter your email" aria-label="Email" class="needs-focus"
-                       style="border:0;background:none;padding:11px 14px;font-size:14px;color:#fff;outline:none;min-width:220px;min-height:44px">
-                <button type="submit"
-                        style="border:0;cursor:pointer;background:#fff;color:var(--primary-dark);font-weight:800;font-size:14px;padding:12px 22px;border-radius:10px;min-height:44px">Subscribe</button>
-            </form>
         </div>
     </section>
 </x-app-layout>

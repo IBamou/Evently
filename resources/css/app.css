@@ -138,5 +138,13 @@ input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-
 .ev-card { transition: transform .2s ease, box-shadow .2s ease; }
 .ev-card:hover { transform: translateY(-4px); box-shadow: var(--shadow); }
 
-/* Focus ring utility — beats inline outline:none on inputs */
-.needs-focus:focus-visible { outline: 2px solid var(--primary) !important; outline-offset: 2px; }
+/* Hero search — no focus highlight at all: nothing is drawn while typing in
+   the search bar or when the Search button is clicked. The input itself is
+   borderless with inline outline:none; this scoped rule also covers the
+   site-wide button:focus-visible outline on the Search button. */
+.hero-search {
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+}
+.hero-search :focus-visible   { outline: none !important; box-shadow: none; }
+.hero-search :focus           { outline: none; }

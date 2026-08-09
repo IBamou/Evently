@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Dto\Ai;
+namespace App\DTOs\Ai;
 
 readonly class AiProviderRoute
 {

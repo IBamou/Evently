@@ -6,9 +6,10 @@
 <x-app-layout :activeNav="'events'">
 @php
     // Hero background: banner image when uploaded, else the category gradient
-    // from the shared helper (App\Helpers\Helper — was duplicated in 5 views).
+    // from the shared helper. Blade {{ }} escapes once — e() here would double-
+    // escape & into &amp;amp; and break the imgix w= param (full-res downloads).
     $heroBg = $event->banner_url
-        ? "url('" . e($event->banner_url) . "') center/cover"
+        ? "url('" . $event->banner_url . "') center/cover"
         : (Helper::categoryGradient($event->category?->slug) ?? 'linear-gradient(135deg,#1E3A8A,#7C3AED)');
 
     $dateLong = $event->starts_at?->format('D, M j, Y · g:i A') ?: '';

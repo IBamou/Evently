@@ -1,8 +1,8 @@
 <?php
 
-namespace App\Dto;
+namespace App\DTOs;
 
-readonly class MarketingResult
+readonly class SocialMarketing
 {
     public function __construct(
         public string $socialPost,

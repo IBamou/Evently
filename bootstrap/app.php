@@ -15,10 +15,6 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'role' => EnsureRole::class,
         ]);
-
-        // Trust ngrok / reverse-proxy headers (X-Forwarded-Proto) so assets and
-        // URLs keep the https scheme when the app is reached through a tunnel.
-        $middleware->trustProxies(at: '*');
     })
     ->withSchedule(function ($schedule) {
         $schedule->command('bookings:expire')->everyFiveMinutes();

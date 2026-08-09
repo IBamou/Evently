@@ -2,7 +2,7 @@
 
 namespace App\Services\Ai;
 
-use App\Dto\Ai\AiProviderRoute;
+use App\DTOs\Ai\AiProviderRoute;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Facades\Http;
