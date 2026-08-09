@@ -13,6 +13,7 @@ use App\Http\Controllers\Organizer\EventController as OrganizerEventController;
 use App\Http\Controllers\Organizer\TicketTypeController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Public\EventController as PublicEventController;
+use App\Http\Controllers\Public\NewsletterController;
 use App\Http\Controllers\User\BookingController as UserBookingController;
 use App\Http\Controllers\User\TicketController;
 use Illuminate\Support\Facades\Auth;
@@ -21,6 +22,7 @@ use Illuminate\Support\Facades\Route;
 // ── Public routes ──
 Route::get('/', [PublicEventController::class, 'index'])->name('events.index');
 Route::get('/events/{event:slug}', [PublicEventController::class, 'show'])->name('events.show');
+Route::post('/newsletter', [NewsletterController::class, 'store'])->name('newsletter.store');
 
 Route::get('/dashboard', function () {
     $role = Auth::user()->role;
