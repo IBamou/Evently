@@ -30,6 +30,11 @@
 ## CI fix (2026-08-09, WSL session)
 - **GitHub CI was red**: 5 NewsletterTest failures, `Route [newsletter.store] not defined`. Root cause: commit `0ae4250` (DTO rename) accidentally deleted the newsletter route + controller import from `routes/web.php` (confirmed via `git show 0ae4250 -- routes/web.php`). Controller/model/migration/tests all still existed.
 - **Fixed**: re-added `use App\Http\Controllers\Public\NewsletterController;` and `Route::post('/newsletter', ...)->name('newsletter.store');` in public routes. Verified: NewsletterTest 5 passed, full suite **416 passed (1218 assertions)** via sail. Committed locally, NOT pushed (user's choice — Windows copy/CI will pull later).
+- **PUSHED 2026-08-09 20:27 UTC**: `main` → origin (`0ae4250..2fb6d65`), tree clean, origin/main in sync. Live site up on :8080 (sail containers restarted; opcache bind-mount error fixed by `sail down && sail up -d` — Docker Desktop had a stale mount after a restart).
+- **WSL git push gotcha (fixed)**: no credential helper → pushes hang silently. Cached GitHub creds live in Windows GCM. Correct WSL config:
+  `git config --global credential.helper "!'/mnt/c/Program Files/Git/mingw64/bin/git-credential-manager.exe'"`
+  ⚠️ The `!` prefix + single quotes around the path are MANDATORY: without `!` git treats it as a git subcommand; without quotes the space in "Program Files" breaks sh.
+
 
 ## Bug audit (2026-08-09)
 - **Bug fixed**: `NewsletterController.php` + `NewsletterSubscription.php` were deleted in repo working tree (unstaged) while routes/views still referenced them → form would 500 on fresh checkout. Restored from git (byte-identical to live WSL copy). Full suite passed: 416 tests, 1218 assertions.
