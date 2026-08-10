@@ -1,6 +1,6 @@
 {{-- Home page — pixel-port of design-evently-home.html (hero + featured + all events + newsletter).
      Rendered inside <x-app-layout> (sidebar/header/footer live in layouts/app.blade.php — mimo). --}}
-@use('App\Helpers\Helper')
+
 
 <x-app-layout :activeNav="'events'">
 @php
@@ -87,7 +87,7 @@
         if ($src) {
             return "url('" . $src . "') center/cover";
         }
-        return Helper::categoryGradient($event->category?->slug) ?? 'linear-gradient(135deg,var(--primary),var(--cyan))';
+        return $event->category_gradient;
     };
 
     // Date line "Fri 24 Jul" — design format.

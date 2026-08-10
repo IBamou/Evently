@@ -1,4 +1,3 @@
-@use('App\Helpers\Helper')
 @php
     // Event picker for check-in: one card per event with live door stats.
     // Contract: $events is a Collection of ['event' => Event, 'stats' => ['checked_in','issued','remaining']].
@@ -32,7 +31,7 @@
                 @endphp
                 <article style="background:var(--surface);border:1px solid var(--border);border-radius:18px;overflow:hidden;display:flex;flex-direction:column">
                     {{-- Header band: category gradient + status badge --}}
-                    <div style="background:{{ Helper::categoryGradient($event->category?->slug) ?? 'linear-gradient(135deg,var(--primary),var(--cyan))' }};color:#fff;padding:16px 18px">
+                    <div style="background:{{ $event->category_gradient }};color:#fff;padding:16px 18px">
                         <div style="display:flex;align-items:flex-start;gap:10px">
                             <div style="flex:1;min-width:0">
                                 <div style="font-size:16px;font-weight:800;letter-spacing:-.3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ $event->title }}</div>

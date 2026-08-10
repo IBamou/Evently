@@ -6,6 +6,7 @@ use App\Enums\EventFormat;
 use App\Enums\EventStatus;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -102,5 +103,21 @@ class Event extends Model
     public function tickets(): HasMany
     {
         return $this->hasMany(Ticket::class);
+    }
+
+    protected function categoryGradient(): Attribute
+    {
+        return Attribute::get(function (): string {
+            $gradients = [
+                'music' => 'linear-gradient(135deg,#1565D8,#0EA5E9)',
+                'business' => 'linear-gradient(135deg,#D97706,#F59E0B)',
+                'tech' => 'linear-gradient(135deg,#7C3AED,#0EA5E9)',
+                'art' => 'linear-gradient(135deg,#14B8A6,#0EA5E9)',
+                'sports' => 'linear-gradient(135deg,#0EA5E9,#14B8A6)',
+                'food-drinks' => 'linear-gradient(135deg,#DC2626,#F59E0B)',
+            ];
+
+            return $gradients[$this->category?->slug ?? ''] ?? 'linear-gradient(135deg,#1E3A8A,#7C3AED)';
+        });
     }
 }

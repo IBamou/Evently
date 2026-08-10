@@ -1,7 +1,6 @@
 {{-- Event detail — pixel-port of design rDetail (lines 503–598).
      Real data: $event (published, organizer + category loaded). No ticket/pricing
      tables exist yet, so the booking widget is a neutral "coming soon" card. --}}
-@use('App\Helpers\Helper')
 
 <x-app-layout :activeNav="'events'">
 @php
@@ -10,7 +9,7 @@
     // escape & into &amp;amp; and break the imgix w= param (full-res downloads).
     $heroBg = $event->banner_url
         ? "url('" . $event->banner_url . "') center/cover"
-        : (Helper::categoryGradient($event->category?->slug) ?? 'linear-gradient(135deg,#1E3A8A,#7C3AED)');
+        : $event->category_gradient;
 
     $dateLong = $event->starts_at?->format('D, M j, Y · g:i A') ?: '';
     $isEnded = ! $event->isUpcoming();
@@ -85,7 +84,7 @@
                     <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px">
                         @foreach ($related as $e)
                             <a href="{{ route('events.show', $e) }}" style="border:1px solid var(--border);border-radius:15px;overflow:hidden;background:var(--surface);cursor:pointer;display:block;text-decoration:none;color:inherit" class="ev-card">
-                                <div style="height:96px;background:{{ Helper::categoryGradient($e->category?->slug) ?? 'linear-gradient(135deg,var(--primary),var(--cyan))' }}"></div>
+                                <div style="height:96px;background:{{ $e->category_gradient }}"></div>
                                 <div style="padding:13px">
                                     <div style="font-size:14px;font-weight:700;margin-bottom:6px">{{ $e->title }}</div>
                                     <div style="font-size:12px;color:var(--muted);font-weight:600">{{ $e->starts_at?->format('D, j M') }} · {{ $e->city }}</div>

@@ -1,4 +1,3 @@
-@use('App\Helpers\Helper')
 @php
     // â”€â”€ Defensive defaults — this view also renders bare via /dashboard (no data passed). â”€â”€
     $underReview ??= collect();
@@ -13,8 +12,7 @@
     $cityBars ??= [];
     $reportStats ??= [];
 
-    // Row cover gradient — shared helper (App\Helpers\Helper, was duplicated here).
-    $rowGrad = fn ($event) => Helper::categoryGradient($event->category?->slug) ?? 'linear-gradient(135deg,#1E3A8A,#7C3AED)';
+    $rowGrad = fn ($event) => $event->category_gradient;
 
     // Status â†’ [badgeBg, badgeFg]
     $statusBadge = [

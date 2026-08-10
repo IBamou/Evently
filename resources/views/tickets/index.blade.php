@@ -1,4 +1,3 @@
-@use('App\Helpers\Helper')
 <x-app-layout :activeNav="'tickets'">
     <style>
         summary::-webkit-details-marker{display:none}
@@ -26,7 +25,7 @@
             <section aria-labelledby="tix-group-{{ $event->id }}" style="margin:0 0 14px">
                 <details data-ticket-group {{ $loop->first ? 'open' : '' }} style="background:var(--surface);border:1px solid var(--border);border-radius:18px;overflow:hidden">
                     <summary class="ticket-summary" style="display:flex;align-items:center;gap:14px;padding:14px 18px;cursor:pointer;list-style:none">
-                        <div style="width:40px;height:40px;border-radius:10px;background:{{ Helper::categoryGradient($event->category?->slug) ?? 'linear-gradient(135deg,var(--primary),var(--cyan))' }};flex-shrink:0"></div>
+                        <div style="width:40px;height:40px;border-radius:10px;background:{{ $event->category_gradient }};flex-shrink:0"></div>
                         <div style="display:flex;flex-direction:column;flex:1;min-width:0;gap:2px">
                             <h2 id="tix-group-{{ $event->id }}" style="margin:0;font-size:15px;font-weight:700;letter-spacing:-.2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ $event->title }}</h2>
                             <div style="font-size:12.5px;font-weight:600;color:var(--muted)">{{ $event->starts_at?->format('M j, Y') ?? '' }} &middot; {{ $event->location ?? '' }}</div>
