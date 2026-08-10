@@ -22,9 +22,6 @@ trait FiltersAndSorts
      *       fn ($q, $search) => $q->orWhereHas('user', fn ($u) => $u->where('name', 'like', "%{$search}%")),
      *   ]);
      *
-     * @template TQuery of Builder|Relation
-     *
-     * @param  TQuery  $query
      * @param  array<int, string|Closure(Builder, string): void>  $searchableFields
      */
     protected function applySearch(Builder|Relation $query, Request $request, array $searchableFields): void
@@ -51,9 +48,6 @@ trait FiltersAndSorts
      * (e.g. "-starts_at" for descending). Unknown values fall back to the
      * given default sort key.
      *
-     * @template TQuery of Builder|Relation
-     *
-     * @param  TQuery  $query
      * @param  array<int, string>  $sortableFields
      */
     protected function applySort(Builder|Relation $query, Request $request, array $sortableFields, string $default = 'created_at'): void
@@ -90,9 +84,6 @@ trait FiltersAndSorts
      *       'date_to' => fn ($q, $v) => $q->where('created_at', '<=', $v),
      *   ]);
      *
-     * @template TQuery of Builder|Relation
-     *
-     * @param  TQuery  $query
      * @param  array<string, string|Closure(Builder, mixed): void>  $filterMap
      */
     protected function applyFilters(Builder|Relation $query, Request $request, array $filterMap): void
