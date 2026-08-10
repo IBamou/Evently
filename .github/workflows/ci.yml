@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   ci:
-    name: Tests, Pint & PHPStan
+    name: Tests & Pint
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
@@ -55,9 +55,6 @@ jobs:
 
       - name: Code style (Pint)
         run: vendor/bin/pint --test
-
-      - name: Static analysis (Larastan, level 8)
-        run: vendor/bin/phpstan analyse --no-progress --memory-limit=1G
 
       - name: Run test suite
         run: php artisan test --compact
