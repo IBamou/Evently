@@ -46,7 +46,6 @@ class UpdateEventRequest extends FormRequest
     protected function withValidator(Validator $validator): void
     {
         $validator->after(function ($validator): void {
-            /** @var Event|null $event */
             $event = $this->route('event');
 
             if (! $event instanceof Event) {

@@ -53,7 +53,6 @@ class EventDraftGenerator extends EventGenerator
             }
         }
 
-        /** @var array $marketing */
         $marketing = $data['marketing'] ?? [];
 
         $result = new EventDraftResult(

@@ -43,7 +43,6 @@ class EventDraftSchema implements AiSchema
             $categoryId = null;
         }
 
-        /** @var array $marketingRaw */
         $marketingRaw = is_array($data['marketing'] ?? null) ? $data['marketing'] : [];
 
         $marketing = [
@@ -52,7 +51,6 @@ class EventDraftSchema implements AiSchema
             'email_intro' => is_string($marketingRaw['email_intro'] ?? null) ? $marketingRaw['email_intro'] : '',
         ];
 
-        /** @var array $missingInformation */
         $missingInformation = array_values(
             array_filter(
                 is_array($data['missing_information'] ?? null) ? $data['missing_information'] : [],

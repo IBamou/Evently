@@ -11,15 +11,11 @@ class MakeAdmin extends Command
 {
     /**
      * The name and signature of the console command.
-     *
-     * @var string
      */
     protected $signature = 'make:admin {email : Email of the admin user} {password? : Password (prompted if omitted)}';
 
     /**
      * The console command description.
-     *
-     * @var string
      */
     protected $description = 'Set a user as admin: promote an existing account or create a new admin';
 

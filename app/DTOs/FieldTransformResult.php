@@ -7,7 +7,6 @@ readonly class FieldTransformResult
     public function __construct(
         public string $content,
         public string $language,
-        /** @var array */
         public array $warnings,
     ) {}
 

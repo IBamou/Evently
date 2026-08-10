@@ -12,15 +12,11 @@ class ExpireBookings extends Command
 {
     /**
      * The name and signature of the console command.
-     *
-     * @var string
      */
     protected $signature = 'bookings:expire';
 
     /**
      * The console command description.
-     *
-     * @var string
      */
     protected $description = 'Expire pending bookings past their expiry window (REQ-CN-010)';
 

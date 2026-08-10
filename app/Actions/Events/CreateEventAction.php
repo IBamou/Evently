@@ -16,7 +16,6 @@ class CreateEventAction
     {
         $data['slug'] = $this->uniqueSlug($data['title']);
 
-        /** @var Event $event */
         $event = $organizer->events()->create($data);
         $event->forceFill(['status' => EventStatus::Draft])->save();
 

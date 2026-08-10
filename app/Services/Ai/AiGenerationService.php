@@ -173,7 +173,6 @@ class AiGenerationService
     {
         $inputs = $this->loadInputs($generation);
 
-        /** @var array $config */
         $config = config('ai-event-copilot');
 
         return $this->generatorFor($generation->operation)->generate($inputs, $route, $config);

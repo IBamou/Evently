@@ -35,7 +35,6 @@ class AiGeneration extends Model
     /** @use HasFactory */
     use HasFactory;
 
-    /** @var array */
     protected $fillable = [
         'public_id',
         'user_id',

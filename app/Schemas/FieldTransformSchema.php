@@ -32,7 +32,6 @@ class FieldTransformSchema implements AiSchema
             throw new \RuntimeException('AI response missing required field: language.');
         }
 
-        /** @var array $warnings */
         $warnings = array_values(
             array_filter(
                 is_array($data['warnings'] ?? null) ? $data['warnings'] : [],

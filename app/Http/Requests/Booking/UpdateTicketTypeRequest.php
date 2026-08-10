@@ -3,7 +3,6 @@
 namespace App\Http\Requests\Booking;
 
 use App\Models\Event;
-use App\Models\TicketType;
 use Carbon\Carbon;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -18,11 +17,9 @@ class UpdateTicketTypeRequest extends FormRequest
 
     public function rules(): array
     {
-        /** @var TicketType $ticketType */
         $ticketType = $this->route('ticketType');
 
         $routeEvent = $this->route('event');
-        /** @var Event $routeEvent */
         $routeEvent = $routeEvent instanceof Event ? $routeEvent : $ticketType->event;
         $eventId = $routeEvent->id;
 
@@ -78,7 +75,6 @@ class UpdateTicketTypeRequest extends FormRequest
      */
     protected function withValidator(Validator $validator): void
     {
-        /** @var TicketType $ticketType */
         $ticketType = $this->route('ticketType');
 
         // Route-model-bound event when present (nested routes), otherwise the

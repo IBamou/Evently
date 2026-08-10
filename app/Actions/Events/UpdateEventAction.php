@@ -42,9 +42,7 @@ class UpdateEventAction
                 : Carbon::parse($data['ends_at']);
         }
 
-        /** @var Carbon $endsAt */
         $endsAt = $data['ends_at'];
-        /** @var Carbon $startsAt */
         $startsAt = $data['starts_at'];
 
         // Prevent moving the start time into the past.

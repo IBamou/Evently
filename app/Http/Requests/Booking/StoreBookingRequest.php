@@ -22,7 +22,6 @@ class StoreBookingRequest extends FormRequest
      */
     protected function prepareForValidation(): void
     {
-        /** @var array $rawItems */
         $rawItems = $this->input('items', []);
 
         $items = collect($rawItems)

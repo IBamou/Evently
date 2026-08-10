@@ -7,7 +7,6 @@ use App\Enums\TicketStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Event;
 use App\Models\Ticket;
-use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -24,7 +23,6 @@ class CheckInController extends Controller
      */
     public function picker(): View
     {
-        /** @var User $user */
         $user = auth()->user();
 
         $events = $user->isAdmin()
@@ -95,7 +93,6 @@ class CheckInController extends Controller
     {
         $this->authorize('update', $event);
 
-        /** @var User $user */
         $user = $request->user();
 
         $request->validate([

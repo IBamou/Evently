@@ -19,7 +19,6 @@ class AiGenerationFeedback extends Model
     /** @use HasFactory */
     use HasFactory;
 
-    /** @var array */
     protected $fillable = [
         'generation_id',
         'action',

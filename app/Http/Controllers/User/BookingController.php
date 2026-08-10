@@ -74,13 +74,11 @@ class BookingController extends Controller
      */
     public function store(StoreBookingRequest $request, BookingService $service): RedirectResponse
     {
-        /** @var User $user */
         $user = Auth::user();
 
         try {
             $validated = $request->validated();
 
-            /** @var array $validated */
             $booking = $service->create($user, $validated);
 
             // Mock payment: if paid event with valid card submitted, confirm immediately.
@@ -122,7 +120,6 @@ class BookingController extends Controller
      */
     public function index(Request $request): View
     {
-        /** @var User $user */
         $user = Auth::user();
 
         $query = $user->bookings()
@@ -160,7 +157,6 @@ class BookingController extends Controller
 
         $booking->load(['items', 'tickets.ticketType', 'payments', 'event']);
 
-        /** @var User $user */
         $user = Auth::user();
 
         $canCancel = $user->can('cancel', $booking) && $booking->isCancellable();

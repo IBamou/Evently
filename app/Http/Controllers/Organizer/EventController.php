@@ -13,7 +13,6 @@ use App\Http\Requests\Organizer\StoreEventRequest;
 use App\Http\Requests\Organizer\UpdateEventRequest;
 use App\Models\Category;
 use App\Models\Event;
-use App\Models\User;
 use App\Services\Organizer\DashboardService;
 use App\Traits\FiltersAndSorts;
 use Illuminate\Http\RedirectResponse;
@@ -34,7 +33,6 @@ class EventController extends Controller
      */
     public function index(IndexEventRequest $request): View
     {
-        /** @var User $user */
         $user = Auth::user();
         $query = $user->events()->with('category:id,name,slug');
 
@@ -69,7 +67,6 @@ class EventController extends Controller
      */
     public function dashboard(): View
     {
-        /** @var User $user */
         $user = Auth::user();
 
         $data = $this->dashboardService->buildDashboardData($user);
@@ -94,7 +91,6 @@ class EventController extends Controller
     {
         $this->authorize('create', Event::class);
 
-        /** @var User $user */
         $user = Auth::user();
         $data = $request->validated();
 

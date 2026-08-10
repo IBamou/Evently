@@ -8,7 +8,6 @@ use App\Models\Event;
 use App\Models\Ticket;
 use App\Models\User;
 use Carbon\Carbon;
-use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
@@ -20,7 +19,6 @@ class TicketController extends Controller
      */
     public function index(): View
     {
-        /** @var User $user */
         $user = Auth::user();
 
         // Status filter — only accept exact TicketStatus enum values; silently ignore invalid values.
@@ -30,7 +28,6 @@ class TicketController extends Controller
             : null;
 
         // Eager-load minimal event + ticketType columns. No pagination — safety cap 200.
-        /** @var Builder $query */
         $query = $user->tickets()
             ->with(['event:id,title,slug,starts_at,ends_at,location,category_id', 'ticketType:id,name']);
 
@@ -38,11 +35,9 @@ class TicketController extends Controller
             $query->where('status', $status);
         }
 
-        /** @var Collection $tickets */
         $tickets = $query->limit(200)->get();
 
         // Unfiltered status counts for the status pills (single query, like User\BookingController).
-        /** @var Collection $statusCounts */
         $statusCounts = $user->tickets()
             ->selectRaw('status, count(*) as total')
             ->groupBy('status')
@@ -58,7 +53,6 @@ class TicketController extends Controller
         // Group tickets by event_id.
         $grouped = $tickets->groupBy('event_id');
 
-        /** @var Collection $eventGroups */
         $eventGroups = $grouped->map(function (Collection $eventTickets) {
             $firstTicket = $eventTickets->first();
 
@@ -94,7 +88,6 @@ class TicketController extends Controller
         $now = Carbon::now();
 
         $eventGroups = $eventGroups->sortBy(function (array $eventGroup) use ($now): array {
-            /** @var Event $event */
             $event = $eventGroup['event'];
             $startsAt = $event->starts_at;
 
