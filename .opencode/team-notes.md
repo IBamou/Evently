@@ -87,3 +87,24 @@
 - **KEPT**: draft agent's bundled `marketing` output (part of generate_draft's structured-output contract — prompts schema + draft tests still assert it). `EventDraftResult` + `SocialMarketing` DTO untouched.
 - 7 tests removed (ValidationTest ×5, StructuredOutputTest ×1, AsyncGenerationTest ×1). Suite: **413 passed (1203 assertions)**; `--filter=Ai` 89 passed. Pint clean (1 file auto-fixed), PHPStan level 8 clean, `view:cache` compiles.
 - Committed `98832f0` (12 files, +3/−444). NOT pushed — main ahead of origin by 9: `a6eb4bd`, `284ae7e`, `2a2dcc2`, `c91e887`, `f2d0eb1`, `62cfb3e`, `ddee9ca`, `6906e6c`, `98832f0`.
+
+## Design-pattern cleanup (2026-08-10) — DONE, local only
+
+### 1. DashboardService
+- **Extracted** `app/Services/Organizer/DashboardService.php`: `buildDashboardData(User): array` encapsulates all dashboard queries (stats, revenue, tickets, check-in rate, orders, chart series, category bars) + private `chartSeries()` and `categoryBars()` helpers.
+- **Organizer/EventController** slimmed **348 → 190 lines**: `dashboard()` is now 5 lines (calls service, passes data to view). Removed 8 unused model/enum imports (`BookingStatus`, `PaymentStatus`, `TicketStatus`, `Booking`, `BookingItem`, `Payment`, `Ticket`, `Collection`). Added constructor-injected `DashboardService`.
+
+### 2. DispatchGenerationAction
+- **Extracted** `app/Actions/Ai/DispatchGenerationAction.php`: invokable action that owns feature-flag check, rate-limit guard, `AiGenerationService::create()` + `storeInputs()`, `ProcessAiGenerationJob::dispatch()`, and the 202 accepted JSON response.
+- **EventAiController** slimmed **162 → 100 lines**: `generateDraft()` and `transformField()` now delegate to `($this->dispatchGeneration)($request, 'operation', fn ($r) => $r->validated())`. Removed `ProcessAiGenerationJob`, `FormRequest` imports. Added constructor-injected `DispatchGenerationAction`.
+
+### 3. AiGenerationPolicy
+- **New** `app/Policies/AiGenerationPolicy.php` with `view()` and `feedback()` methods — both check `$generation->user_id === $user->id`. Auto-discovered by convention (`AiGeneration` → `AiGenerationPolicy`).
+- **EventAiController** `status()` and `recordFeedback()` now use `$this->authorize('view', $generation)` and `$this->authorize('feedback', $generationModel)` instead of manual checks.
+- Tests updated: `AsyncGenerationTest` "returns 404 for status of another user's generation" now expects 403 ("This action is unauthorized.") instead of 404; `UsageRecordingTest` "returns 403 for feedback on another user generation" message updated to match Laravel's default.
+
+### Verification
+- **413 passed** (1203 assertions) — all green.
+- **PHPStan level 8**: clean (required precise generic type on `Collection<int, array{...}>` in DashboardService return type).
+- **Pint**: clean (minor fixes to new files).
+- Committed `ac5ca29` (7 files, +291/−241). NOT pushed — main ahead of origin by 12 now.
