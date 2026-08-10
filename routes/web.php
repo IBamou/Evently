@@ -3,6 +3,7 @@
 use App\Enums\UserRole;
 use App\Http\Controllers\Admin\BookingController as AdminBookingController;
 use App\Http\Controllers\Admin\CategoryController as AdminCategoryController;
+use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\EventController as AdminEventController;
 use App\Http\Controllers\Admin\PaymentController as AdminPaymentController;
 use App\Http\Controllers\Admin\TicketController as AdminTicketController;
@@ -99,7 +100,7 @@ Route::middleware(['auth', 'role:organizer,admin'])->prefix('organizer')->name('
 // ── Admin routes ──
 Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->group(function () {
     // Platform dashboard (design odash as admin: "Platform dashboard").
-    Route::get('dashboard', [AdminEventController::class, 'dashboard'])->name('dashboard');
+    Route::get('dashboard', [DashboardController::class, 'dashboard'])->name('dashboard');
 
     Route::get('events', [AdminEventController::class, 'index'])->name('events.index');
     Route::post('events/{event}/publish', [AdminEventController::class, 'publish'])->name('events.publish');
