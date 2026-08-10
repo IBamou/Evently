@@ -56,7 +56,8 @@ class EventController extends Controller
         }
 
         if ($request->filled('starts_to')) {
-            $query->where('starts_at', '<=', $request->input('starts_to'));
+            // whereDate so the whole "to" day is included, not just midnight.
+            $query->whereDate('starts_at', '<=', $request->input('starts_to'));
         }
 
         $this->applySort($query, $request, ['starts_at', 'created_at', 'title'], 'created_at');

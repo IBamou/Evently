@@ -277,6 +277,34 @@ class PublicEventsTest extends TestCase
         $this->assertSame('Night Gig', $events->first()->title);
     }
 
+    public function test_public_index_starts_to_includes_events_later_that_day(): void
+    {
+        Event::factory()->published()->create([
+            'title' => 'Afternoon Session',
+            'starts_at' => now()->addDays(1)->setTime(15, 30),
+        ]);
+
+        $response = $this->get(route('events.index', ['starts_to' => now()->addDays(1)->format('Y-m-d')]));
+        $response->assertOk();
+
+        $events = $response->viewData('events');
+        $this->assertSame(1, $events->total());
+        $this->assertSame('Afternoon Session', $events->first()->title);
+    }
+
+    public function test_public_index_starts_to_excludes_events_after_that_day(): void
+    {
+        Event::factory()->published()->create([
+            'title' => 'Next Day Event',
+            'starts_at' => now()->addDays(2)->setTime(9, 0),
+        ]);
+
+        $response = $this->get(route('events.index', ['starts_to' => now()->addDays(1)->format('Y-m-d')]));
+        $response->assertOk();
+
+        $this->assertSame(0, $response->viewData('events')->total());
+    }
+
     public function test_hero_stats_show_real_upcoming_count(): void
     {
         // Create 2 upcoming published events

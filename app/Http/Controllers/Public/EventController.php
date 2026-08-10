@@ -59,7 +59,8 @@ class EventController extends Controller
         }
 
         if ($request->filled('starts_to')) {
-            $query->where('starts_at', '<=', $request->input('starts_to'));
+            // whereDate so the whole "to" day is included, not just midnight.
+            $query->whereDate('starts_at', '<=', $request->input('starts_to'));
         }
 
         // Max price filter: match events that have at least one ticket type at or below the price
