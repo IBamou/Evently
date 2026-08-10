@@ -27,6 +27,11 @@
 - Computed styles via `getComputedStyle` serialize with explicit `px` — don't compare CSS strings as written.
 - Edited files are `.blade.php` views only; no PHP changes this round.
 
+## Refactor (2026-08-09, WSL session)
+- **Split Admin/EventController (424 lines)**: moved dashboard screen + chart/category helpers to new `Admin/DashboardController` (pure code movement, route `admin.dashboard` re-pointed, views untouched). `EventController` now = events list + reports tab helpers + moderation actions. Committed `a6eb4bd`, NOT pushed. Full suite 416 green, PHPStan clean, Pint clean.
+- **FiltersAndSorts trait** (inspired by user's ForgeCoreApi project): new `app/Traits/FiltersAndSorts.php` with `applySearch/applySort/perPage` — search+sort+paginate blocks removed from Public/Admin/Organizer `EventController::index()`. Grouped search closure preserved (cannot bypass visibility). Sort keeps `-field` prefix convention; per_page unified to max(1,min(50)). PHPStan level 8 clean via `@template TQuery of Builder|Relation` (HasMany vs Builder union). Verified: 416 tests green + all 9 live-page filter combos return 200. Committed locally, NOT pushed.
+- ⚠️ ForgeCoreApi's `FiltersAndSorts` uses ungrouped `orWhere` (can bypass other where clauses) — Evently version groups the search; the ForgeCoreApi one is the only spot to improve there, not copy.
+
 ## CI fix (2026-08-09, WSL session)
 - **GitHub CI was red**: 5 NewsletterTest failures, `Route [newsletter.store] not defined`. Root cause: commit `0ae4250` (DTO rename) accidentally deleted the newsletter route + controller import from `routes/web.php` (confirmed via `git show 0ae4250 -- routes/web.php`). Controller/model/migration/tests all still existed.
 - **Fixed**: re-added `use App\Http\Controllers\Public\NewsletterController;` and `Route::post('/newsletter', ...)->name('newsletter.store');` in public routes. Verified: NewsletterTest 5 passed, full suite **416 passed (1218 assertions)** via sail. Committed locally, NOT pushed (user's choice — Windows copy/CI will pull later).

@@ -21,6 +21,7 @@ use App\Models\Event;
 use App\Models\Payment;
 use App\Models\Ticket;
 use App\Models\User;
+use App\Traits\FiltersAndSorts;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
@@ -29,6 +30,8 @@ use RuntimeException;
 
 class EventController extends Controller
 {
+    use FiltersAndSorts;
+
     /**
      * Display a listing of the organizer's events.
      */
@@ -42,13 +45,7 @@ class EventController extends Controller
             $query->where('status', $request->input('status'));
         }
 
-        if ($request->filled('search')) {
-            $search = $request->input('search');
-            $query->where(function ($q) use ($search): void {
-                $q->where('title', 'like', "%{$search}%")
-                    ->orWhere('description', 'like', "%{$search}%");
-            });
-        }
+        $this->applySearch($query, $request, ['title', 'description']);
 
         if ($request->filled('city')) {
             $query->where('city', $request->input('city'));
@@ -62,23 +59,9 @@ class EventController extends Controller
             $query->where('starts_at', '<=', $request->input('starts_to'));
         }
 
-        $sortOptions = [
-            'starts_at' => ['starts_at', 'asc'],
-            '-starts_at' => ['starts_at', 'desc'],
-            'created_at' => ['created_at', 'asc'],
-            '-created_at' => ['created_at', 'desc'],
-            'title' => ['title', 'asc'],
-            '-title' => ['title', 'desc'],
-        ];
+        $this->applySort($query, $request, ['starts_at', 'created_at', 'title'], 'created_at');
 
-        $sort = $request->input('sort', 'created_at');
-        if (isset($sortOptions[$sort])) {
-            $query->orderBy($sortOptions[$sort][0], $sortOptions[$sort][1]);
-        } else {
-            $query->orderBy('created_at', 'desc');
-        }
-
-        $events = $query->paginate(min((int) $request->input('per_page', 15), 50));
+        $events = $query->paginate($this->perPage($request));
 
         $filters = $request->only(['status', 'search', 'city', 'sort', 'per_page']);
 

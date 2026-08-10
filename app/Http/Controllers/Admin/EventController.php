@@ -13,6 +13,7 @@ use App\Models\Category;
 use App\Models\Event;
 use App\Models\Payment;
 use App\Models\User;
+use App\Traits\FiltersAndSorts;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -21,6 +22,8 @@ use RuntimeException;
 
 class EventController extends Controller
 {
+    use FiltersAndSorts;
+
     /**
      * Display a listing of all events (admin).
      */
@@ -36,35 +39,15 @@ class EventController extends Controller
             $query->where('organizer_id', $request->input('organizer_id'));
         }
 
-        if ($request->filled('search')) {
-            $search = $request->input('search');
-            $query->where(function ($q) use ($search): void {
-                $q->where('title', 'like', "%{$search}%")
-                    ->orWhere('description', 'like', "%{$search}%");
-            });
-        }
+        $this->applySearch($query, $request, ['title', 'description']);
 
         if ($request->filled('city')) {
             $query->where('city', $request->input('city'));
         }
 
-        $sortOptions = [
-            'starts_at' => ['starts_at', 'asc'],
-            '-starts_at' => ['starts_at', 'desc'],
-            'created_at' => ['created_at', 'asc'],
-            '-created_at' => ['created_at', 'desc'],
-            'title' => ['title', 'asc'],
-            '-title' => ['title', 'desc'],
-        ];
+        $this->applySort($query, $request, ['starts_at', 'created_at', 'title'], 'created_at');
 
-        $sort = $request->input('sort', 'created_at');
-        if (isset($sortOptions[$sort])) {
-            $query->orderBy($sortOptions[$sort][0], $sortOptions[$sort][1]);
-        } else {
-            $query->orderBy('created_at', 'desc');
-        }
-
-        $perPage = max(1, min((int) $request->input('per_page', 15), 50));
+        $perPage = $this->perPage($request);
         $events = $query->paginate($perPage);
 
         $filters = $request->only(['status', 'organizer_id', 'search', 'city', 'sort', 'per_page']);

@@ -7,11 +7,14 @@ use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Models\Event;
 use App\Models\Ticket;
+use App\Traits\FiltersAndSorts;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 class EventController extends Controller
 {
+    use FiltersAndSorts;
+
     /**
      * Display a listing of published events (public).
      */
@@ -22,13 +25,8 @@ class EventController extends Controller
             ->whereNull('deleted_at')
             ->with(['organizer:id,name', 'category:id,name,slug']);
 
-        // Grouped search (title OR description) inside closure so it can NEVER bypass visibility
-        $query->when($request->filled('search'), function ($q, $search): void {
-            $q->where(function ($sub) use ($search): void {
-                $sub->where('title', 'like', "%{$search}%")
-                    ->orWhere('description', 'like', "%{$search}%");
-            });
-        });
+        // Grouped search so it can NEVER bypass visibility.
+        $this->applySearch($query, $request, ['title', 'description']);
 
         // City exact filter
         if ($request->filled('city')) {
@@ -69,25 +67,11 @@ class EventController extends Controller
             $query->whereHas('ticketTypes', fn ($q) => $q->where('price', '<=', (float) $request->input('max_price')));
         }
 
-        // Whitelisted sort (default starts_at asc)
-        $sortOptions = [
-            'starts_at' => ['starts_at', 'asc'],
-            '-starts_at' => ['starts_at', 'desc'],
-            'created_at' => ['created_at', 'asc'],
-            '-created_at' => ['created_at', 'desc'],
-            'title' => ['title', 'asc'],
-            '-title' => ['title', 'desc'],
-        ];
-
-        $sort = $request->input('sort', 'starts_at');
-        if (isset($sortOptions[$sort])) {
-            $query->orderBy($sortOptions[$sort][0], $sortOptions[$sort][1]);
-        } else {
-            $query->orderBy('starts_at', 'asc');
-        }
+        // Whitelisted sort (default starts_at asc).
+        $this->applySort($query, $request, ['starts_at', 'created_at', 'title'], 'starts_at');
 
         // Paginate (max 50, min 1)
-        $perPage = max(1, min((int) $request->input('per_page', 15), 50));
+        $perPage = $this->perPage($request);
         $events = $query->paginate($perPage);
 
         // Featured: all upcoming published events (horizontal scroll on home page)
