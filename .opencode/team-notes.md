@@ -108,3 +108,26 @@
 - **PHPStan level 8**: clean (required precise generic type on `Collection<int, array{...}>` in DashboardService return type).
 - **Pint**: clean (minor fixes to new files).
 - Committed `ac5ca29` (7 files, +291/−241). NOT pushed — main ahead of origin by 12 now.
+
+## Prompts move + Schemas for AI response validation (2026-08-10) — DONE, local only
+
+### Prompts relocated
+- `app/Ai/Prompts/EventCopilotPrompts.php` → `app/Prompts/EventCopilotPrompts.php` (namespace `App\Prompts`). Both agents updated to `use App\Prompts\EventCopilotPrompts;`. Old directory removed.
+
+### New `app/Schemas/` directory
+- **`app/Schemas/Contracts/AiSchema.php`** — interface with two methods:
+  - `schema(JsonSchema $schema): array` — returns the JsonSchema array for the AI provider's structured output (same as what agents used to define inline).
+  - `validate(array $data): array` — validates and coerces decoded AI response data; throws `\RuntimeException` on missing/invalid required fields.
+- **`app/Schemas/EventDraftSchema.php`** — implements AiSchema. `schema()` returns the draft JSON structure (title, description, category_id, marketing object, missing_information). `validate()` checks title/description are non-empty strings, coerces category_id to null on non-int, defaults marketing sub-fields to empty strings on missing, filters missing_information to strings only.
+- **`app/Schemas/FieldTransformSchema.php`** — implements AiSchema. `schema()` returns content/language/warnings. `validate()` checks content/language are non-empty strings, filters warnings to strings only.
+
+### Integration
+- **Agents** (`GenerateEventDraftAgent`, `TransformEventFieldAgent`): `schema()` now delegates to `$this->aiSchema()->schema($schema)`. Added `aiSchema(): AiSchema` method returning the appropriate schema instance from the container.
+- **EventGenerator**: `decodeStructuredResponse()` now accepts an `AiSchema` parameter and calls `$schema->validate($data)` after JSON decode (including markdown fence fallback). Added abstract `schema(): AiSchema` to the base class.
+- **Concrete generators** (`EventDraftGenerator`, `EventFieldTransformGenerator`): each implements `schema()` returning its AiSchema. `generate()` passes the schema through `runAgentFlow()`.
+
+### Verification
+- **413 passed** (1203 assertions) — all green.
+- **PHPStan level 8**: clean.
+- **Pint**: clean.
+- Committed `c258f1c` (9 files, +201/−24). NOT pushed — main ahead of origin by 14.
