@@ -61,9 +61,11 @@ abstract class EventGenerator
     /**
      * Decode the agent's structured output into an array.
      *
-     * A null or non-JSON payload is treated as an invalid structured output:
-     * a permanent (non-retryable) failure so the generation ends in ERROR
-     * instead of silently persisting an empty result.
+     * Handles raw JSON and JSON wrapped in markdown code fences (```json),
+     * which some providers return despite structured-output instructions.
+     * A null or non-decodable payload is treated as an invalid structured
+     * output: a permanent (non-retryable) failure so the generation ends in
+     * ERROR instead of silently persisting an empty result.
      *
      * @return array<string, mixed>
      */
@@ -74,6 +76,13 @@ abstract class EventGenerator
         }
 
         $data = json_decode($text, true);
+
+        if (! is_array($data)) {
+            // Fallback: try extracting JSON from markdown code fences.
+            if (preg_match('/```(?:json)?\s*\n?(.*?)\n?\s*```/s', $text, $m)) {
+                $data = json_decode($m[1], true);
+            }
+        }
 
         if (! is_array($data)) {
             throw new \RuntimeException('AI returned an invalid response.');
