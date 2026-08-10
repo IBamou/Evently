@@ -223,5 +223,5 @@ it('returns 403 for feedback on another user generation', function () {
     );
 
     $response->assertStatus(403)
-        ->assertJson(['message' => 'Unauthorized.']);
+        ->assertJson(['message' => 'This action is unauthorized.']);
 });

@@ -235,8 +235,8 @@ it('returns 404 for status of another users generation', function () {
         route('organizer.ai.generations.status', ['generation' => $generation->public_id]),
     );
 
-    $response->assertStatus(404)
-        ->assertJson(['message' => 'Generation not found.']);
+    $response->assertStatus(403)
+        ->assertJson(['message' => 'This action is unauthorized.']);
 });
 
 it('returns 403 for status when copilot is disabled', function () {
