@@ -15,6 +15,7 @@ use App\Models\AiGeneration;
 use App\Models\Category;
 use App\Models\User;
 use Illuminate\Support\Facades\Log;
+use Laravel\Ai\Contracts\Agent;
 use Throwable;
 
 class AiGenerationService
@@ -195,6 +196,25 @@ class AiGenerationService
     }
 
     /**
+     * Run an agent and decode its structured output.
+     *
+     * @param  array<string, mixed>  $config
+     * @param  callable(array<string, mixed>): array<string, mixed>  $map
+     * @return array<string, mixed>
+     */
+    private function runAgentFlow(Agent $agent, string $promptText, AiProviderRoute $route, array $config, callable $map): array
+    {
+        $response = $agent->prompt(
+            $promptText,
+            provider: $route->provider,
+            model: $route->model,
+            timeout: $config['timeout'],
+        );
+
+        return $map($this->decodeStructuredResponse($response->text));
+    }
+
+    /**
      * @param  array<string, mixed>  $inputs
      * @param  array<string, mixed>  $config
      * @return array<string, mixed>
@@ -212,40 +232,33 @@ class AiGenerationService
             categories: $categories,
         );
 
-        $response = $agent->prompt(
-            'Generate event draft',
-            provider: $route->provider,
-            model: $route->model,
-            timeout: $config['timeout'],
-        );
-
-        $data = $this->decodeStructuredResponse($response->text);
-
-        $categoryId = $data['category_id'] ?? null;
-        $category = null;
-        if ($categoryId !== null) {
-            $category = collect($categories)->firstWhere('id', $categoryId);
-            if ($category === null) {
-                $categoryId = null;
+        return $this->runAgentFlow($agent, 'Generate event draft', $route, $config, function (array $data) use ($categories): array {
+            $categoryId = $data['category_id'] ?? null;
+            $category = null;
+            if ($categoryId !== null) {
+                $category = collect($categories)->firstWhere('id', $categoryId);
+                if ($category === null) {
+                    $categoryId = null;
+                }
             }
-        }
 
-        /** @var array<string, mixed> $marketing */
-        $marketing = $data['marketing'] ?? [];
+            /** @var array<string, mixed> $marketing */
+            $marketing = $data['marketing'] ?? [];
 
-        $result = new EventDraftResult(
-            title: $data['title'] ?? '',
-            description: $data['description'] ?? '',
-            category: $category ? ['id' => $category['id'], 'name' => $category['name'], 'slug' => $category['slug']] : null,
-            marketing: new SocialMarketing(
-                socialPost: $marketing['social_post'] ?? '',
-                emailSubject: $marketing['email_subject'] ?? '',
-                emailIntro: $marketing['email_intro'] ?? '',
-            ),
-            missingInformation: array_values($data['missing_information'] ?? []),
-        );
+            $result = new EventDraftResult(
+                title: $data['title'] ?? '',
+                description: $data['description'] ?? '',
+                category: $category ? ['id' => $category['id'], 'name' => $category['name'], 'slug' => $category['slug']] : null,
+                marketing: new SocialMarketing(
+                    socialPost: $marketing['social_post'] ?? '',
+                    emailSubject: $marketing['email_subject'] ?? '',
+                    emailIntro: $marketing['email_intro'] ?? '',
+                ),
+                missingInformation: array_values($data['missing_information'] ?? []),
+            );
 
-        return $result->toArray();
+            return $result->toArray();
+        });
     }
 
     /**
@@ -261,22 +274,15 @@ class AiGenerationService
             eventContext: $inputs['event_context'] ?? [],
         );
 
-        $response = $agent->prompt(
-            'Generate marketing content',
-            provider: $route->provider,
-            model: $route->model,
-            timeout: $config['timeout'],
-        );
+        return $this->runAgentFlow($agent, 'Generate marketing content', $route, $config, function (array $data): array {
+            $result = new MarketingResult(
+                socialPost: $data['social_post'] ?? '',
+                emailSubject: $data['email_subject'] ?? '',
+                emailIntro: $data['email_intro'] ?? '',
+            );
 
-        $data = $this->decodeStructuredResponse($response->text);
-
-        $result = new MarketingResult(
-            socialPost: $data['social_post'] ?? '',
-            emailSubject: $data['email_subject'] ?? '',
-            emailIntro: $data['email_intro'] ?? '',
-        );
-
-        return $result->toArray();
+            return $result->toArray();
+        });
     }
 
     /**
@@ -295,22 +301,15 @@ class AiGenerationService
             eventContext: $inputs['event_context'] ?? [],
         );
 
-        $response = $agent->prompt(
-            'Transform field',
-            provider: $route->provider,
-            model: $route->model,
-            timeout: $config['timeout'],
-        );
+        return $this->runAgentFlow($agent, 'Transform field', $route, $config, function (array $data) use ($inputs): array {
+            $result = new FieldTransformResult(
+                content: $data['content'] ?? '',
+                language: $data['language'] ?? ($inputs['target_language'] ?? 'en'),
+                warnings: array_values($data['warnings'] ?? []),
+            );
 
-        $data = $this->decodeStructuredResponse($response->text);
-
-        $result = new FieldTransformResult(
-            content: $data['content'] ?? '',
-            language: $data['language'] ?? ($inputs['target_language'] ?? 'en'),
-            warnings: array_values($data['warnings'] ?? []),
-        );
-
-        return $result->toArray();
+            return $result->toArray();
+        });
     }
 
     /**
