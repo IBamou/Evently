@@ -28,20 +28,14 @@ class EventController extends Controller
         // Grouped search so it can NEVER bypass visibility.
         $this->applySearch($query, $request, ['title', 'description']);
 
-        // City exact filter
-        if ($request->filled('city')) {
-            $query->where('city', $request->input('city'));
-        }
-
-        // Category filter (by slug, keeps URL friendly)
-        if ($request->filled('category')) {
-            $query->whereHas('category', fn ($q) => $q->where('slug', $request->input('category')));
-        }
-
-        // Format filter
-        if ($request->filled('format') && in_array($request->input('format'), ['in_person', 'online'], true)) {
-            $query->where('format', $request->input('format'));
-        }
+        $this->applyFilters($query, $request, [
+            'city' => 'city',
+            'category' => fn ($q, $v) => $q->whereHas('category', fn ($cq) => $cq->where('slug', $v)),
+            'format' => fn ($q, $v) => in_array($v, ['in_person', 'online'], true) ? $q->where('format', $v) : null,
+            'starts_from' => fn ($q, $v) => $q->where('starts_at', '>=', $v),
+            'starts_to' => fn ($q, $v) => $q->whereDate('starts_at', '<=', $v),
+            'max_price' => fn ($q, $v) => $q->whereHas('ticketTypes', fn ($tq) => $tq->where('price', '<=', (float) $v)),
+        ]);
 
         // Time-of-day filter (based on starts_at hour)
         if ($request->filled('time')) {
@@ -51,21 +45,6 @@ class EventController extends Controller
                 'evening' => $query->whereTime('starts_at', '>=', '18:00:00'),
                 default => null,
             };
-        }
-
-        // Date range filter
-        if ($request->filled('starts_from')) {
-            $query->where('starts_at', '>=', $request->input('starts_from'));
-        }
-
-        if ($request->filled('starts_to')) {
-            // whereDate so the whole "to" day is included, not just midnight.
-            $query->whereDate('starts_at', '<=', $request->input('starts_to'));
-        }
-
-        // Max price filter: match events that have at least one ticket type at or below the price
-        if ($request->filled('max_price')) {
-            $query->whereHas('ticketTypes', fn ($q) => $q->where('price', '<=', (float) $request->input('max_price')));
         }
 
         // Whitelisted sort (default starts_at asc).

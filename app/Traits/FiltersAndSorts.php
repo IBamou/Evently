@@ -2,6 +2,7 @@
 
 namespace App\Traits;
 
+use Closure;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Http\Request;
@@ -14,10 +15,17 @@ trait FiltersAndSorts
      * The whole search is wrapped in one closure so it can never bypass
      * other where constraints (visibility, status, ownership…).
      *
+     * Supports both simple column names and closures for relation searches:
+     *   $this->applySearch($query, $request, [
+     *       'title',
+     *       'description',
+     *       fn ($q, $search) => $q->orWhereHas('user', fn ($u) => $u->where('name', 'like', "%{$search}%")),
+     *   ]);
+     *
      * @template TQuery of Builder|Relation
      *
      * @param  TQuery  $query
-     * @param  array<int, string>  $searchableFields
+     * @param  array<int, string|Closure(Builder, string): void>  $searchableFields
      */
     protected function applySearch(Builder|Relation $query, Request $request, array $searchableFields): void
     {
@@ -25,11 +33,15 @@ trait FiltersAndSorts
             return;
         }
 
-        $search = $request->str('search');
+        $search = $request->str('search')->toString();
 
         $query->where(function (Builder $q) use ($search, $searchableFields): void {
             foreach ($searchableFields as $field) {
-                $q->orWhere($field, 'like', "%{$search}%");
+                if ($field instanceof Closure) {
+                    $field($q, $search);
+                } else {
+                    $q->orWhere($field, 'like', "%{$search}%");
+                }
             }
         });
     }
@@ -64,5 +76,37 @@ trait FiltersAndSorts
     protected function perPage(Request $request, int $default = 15): int
     {
         return max(1, min(50, (int) $request->integer('per_page', $default)));
+    }
+
+    /**
+     * Apply simple equality filters from request parameters.
+     *
+     * Maps request keys to database columns. Supports closures for custom
+     * operators (e.g. date ranges):
+     *   $this->applyFilters($query, $request, [
+     *       'status' => 'status',
+     *       'event_id' => 'event_id',
+     *       'date_from' => fn ($q, $v) => $q->where('created_at', '>=', $v),
+     *       'date_to' => fn ($q, $v) => $q->where('created_at', '<=', $v),
+     *   ]);
+     *
+     * @template TQuery of Builder|Relation
+     *
+     * @param  TQuery  $query
+     * @param  array<string, string|Closure(Builder, mixed): void>  $filterMap
+     */
+    protected function applyFilters(Builder|Relation $query, Request $request, array $filterMap): void
+    {
+        foreach ($filterMap as $requestKey => $columnOrClosure) {
+            if ($request->filled($requestKey)) {
+                $value = $request->input($requestKey);
+
+                if ($columnOrClosure instanceof Closure) {
+                    $columnOrClosure($query, $value);
+                } else {
+                    $query->where($columnOrClosure, $value);
+                }
+            }
+        }
     }
 }

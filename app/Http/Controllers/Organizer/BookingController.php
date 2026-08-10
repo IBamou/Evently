@@ -6,11 +6,14 @@ use App\Enums\TicketStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Event;
 use App\Models\Ticket;
+use App\Traits\FiltersAndSorts;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 class BookingController extends Controller
 {
+    use FiltersAndSorts;
+
     /**
      * List bookings + attendees for an event.
      */
@@ -22,18 +25,15 @@ class BookingController extends Controller
             ->with(['user', 'items.ticketType'])
             ->withCount('tickets');
 
-        if ($request->filled('status')) {
-            $query->where('status', $request->input('status'));
-        }
+        $this->applyFilters($query, $request, [
+            'status' => 'status',
+        ]);
 
-        if ($request->filled('search')) {
-            $search = $request->input('search');
-            $query->where(function ($q) use ($search) {
-                $q->where('reference', 'like', "%{$search}%")
-                    ->orWhereHas('user', fn ($u) => $u->where('name', 'like', "%{$search}%")
-                        ->orWhere('email', 'like', "%{$search}%"));
-            });
-        }
+        $this->applySearch($query, $request, [
+            'reference',
+            fn ($q, $search) => $q->orWhereHas('user', fn ($u) => $u->where('name', 'like', "%{$search}%")
+                ->orWhere('email', 'like', "%{$search}%")),
+        ]);
 
         $bookings = $query->orderBy('created_at', 'desc')->paginate(15);
 

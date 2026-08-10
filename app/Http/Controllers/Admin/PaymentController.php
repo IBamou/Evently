@@ -4,11 +4,14 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Payment;
+use App\Traits\FiltersAndSorts;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 class PaymentController extends Controller
 {
+    use FiltersAndSorts;
+
     /**
      * List all payments (admin, REQ-PY-008).
      */
@@ -17,21 +20,12 @@ class PaymentController extends Controller
         $query = Payment::query()
             ->with(['booking.user', 'booking.event']);
 
-        if ($request->filled('status')) {
-            $query->where('status', $request->input('status'));
-        }
-
-        if ($request->filled('reference')) {
-            $query->whereHas('booking', fn ($q) => $q->where('reference', 'like', '%'.$request->input('reference').'%'));
-        }
-
-        if ($request->filled('date_from')) {
-            $query->where('created_at', '>=', $request->input('date_from'));
-        }
-
-        if ($request->filled('date_to')) {
-            $query->where('created_at', '<=', $request->input('date_to'));
-        }
+        $this->applyFilters($query, $request, [
+            'status' => 'status',
+            'reference' => fn ($q, $v) => $q->whereHas('booking', fn ($bq) => $bq->where('reference', 'like', "%{$v}%")),
+            'date_from' => fn ($q, $v) => $q->where('created_at', '>=', $v),
+            'date_to' => fn ($q, $v) => $q->where('created_at', '<=', $v),
+        ]);
 
         $payments = $query->orderBy('created_at', 'desc')->paginate(15);
 

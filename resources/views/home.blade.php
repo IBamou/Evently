@@ -372,26 +372,4 @@
             @endif
         </div>
     </section>
-
-    {{-- ===================== NEWSLETTER ===================== --}}
-    <section aria-label="Newsletter" style="max-width:1380px;margin:0 auto;padding:0 26px 60px">
-        @if (session('success'))
-            <div role="status" style="margin-bottom:16px;padding:13px 18px;border-radius:12px;font-size:13.5px;font-weight:700;background:color-mix(in srgb,var(--ok) 12%,transparent);border:1px solid color-mix(in srgb,var(--ok) 40%,transparent);color:var(--ok)">{{ session('success') }}</div>
-        @endif
-        @if ($errors->has('email'))
-            <div role="alert" style="margin-bottom:16px;padding:13px 18px;border-radius:12px;font-size:13.5px;font-weight:700;background:color-mix(in srgb,#E5484D 10%,transparent);border:1px solid color-mix(in srgb,#E5484D 40%,transparent);color:#E5484D">{{ $errors->first('email') }}</div>
-        @endif
-        <div style="position:relative;overflow:hidden;border-radius:20px;background:linear-gradient(120deg,var(--primary-dark),var(--primary) 55%,var(--cyan));padding:38px;display:flex;align-items:center;gap:26px;flex-wrap:wrap">
-            {{-- Wave decoration --}}
-            <div style="position:absolute;inset:auto 0 0 0;height:70px;opacity:.28;animation:wave 13s linear infinite;width:200%">
-                <svg width="100%" height="100%" viewBox="0 0 2400 70" preserveAspectRatio="none"><path d="M0 30c240 26 360-26 600 0s360 26 600 0 360-26 600 0 360 26 600 0v40H0z" fill="#fff"></path></svg>
-            </div>
-
-            {{-- Text --}}
-            <div style="position:relative;flex:1;min-width:260px">
-                <h2 style="margin:0 0 6px;color:#fff;font-size:24px;font-weight:800;letter-spacing:-.6px">Stay in the loop</h2>
-                <p style="margin:0;color:rgba(255,255,255,.82);font-size:14px">New events in Casablanca, Rabat and Marrakech &mdash; straight to your inbox.</p>
-            </div>
-        </div>
-    </section>
 </x-app-layout>

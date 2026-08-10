@@ -38,24 +38,14 @@ class EventController extends Controller
         $user = Auth::user();
         $query = $user->events()->with('category:id,name,slug');
 
-        if ($request->filled('status')) {
-            $query->where('status', $request->input('status'));
-        }
+        $this->applyFilters($query, $request, [
+            'status' => 'status',
+            'city' => 'city',
+            'starts_from' => fn ($q, $v) => $q->where('starts_at', '>=', $v),
+            'starts_to' => fn ($q, $v) => $q->whereDate('starts_at', '<=', $v),
+        ]);
 
         $this->applySearch($query, $request, ['title', 'description']);
-
-        if ($request->filled('city')) {
-            $query->where('city', $request->input('city'));
-        }
-
-        if ($request->filled('starts_from')) {
-            $query->where('starts_at', '>=', $request->input('starts_from'));
-        }
-
-        if ($request->filled('starts_to')) {
-            // whereDate so the whole "to" day is included, not just midnight.
-            $query->whereDate('starts_at', '<=', $request->input('starts_to'));
-        }
 
         $this->applySort($query, $request, ['starts_at', 'created_at', 'title'], 'created_at');
 

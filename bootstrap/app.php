@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\EnsureAiEnabled;
 use App\Http\Middleware\EnsureRole;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -14,6 +15,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->alias([
             'role' => EnsureRole::class,
+            'ai.enabled' => EnsureAiEnabled::class,
         ]);
     })
     ->withSchedule(function ($schedule) {

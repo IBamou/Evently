@@ -31,19 +31,13 @@ class EventController extends Controller
     {
         $query = Event::query()->with(['organizer:id,name', 'category:id,name,slug']);
 
-        if ($request->filled('status')) {
-            $query->where('status', $request->input('status'));
-        }
-
-        if ($request->filled('organizer_id')) {
-            $query->where('organizer_id', $request->input('organizer_id'));
-        }
+        $this->applyFilters($query, $request, [
+            'status' => 'status',
+            'organizer_id' => 'organizer_id',
+            'city' => 'city',
+        ]);
 
         $this->applySearch($query, $request, ['title', 'description']);
-
-        if ($request->filled('city')) {
-            $query->where('city', $request->input('city'));
-        }
 
         $this->applySort($query, $request, ['starts_at', 'created_at', 'title'], 'created_at');
 

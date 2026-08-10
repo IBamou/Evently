@@ -9,13 +9,17 @@ use App\Models\Booking;
 use App\Models\Event;
 use App\Models\User;
 use App\Services\BookingService;
+use App\Traits\FiltersAndSorts;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
 use RuntimeException;
 
 class BookingController extends Controller
 {
+    use FiltersAndSorts;
+
     /**
      * Show the checkout page with event summary + active ticket types + availability.
      */
@@ -116,7 +120,7 @@ class BookingController extends Controller
     /**
      * List user's bookings.
      */
-    public function index(): View
+    public function index(Request $request): View
     {
         /** @var User $user */
         $user = Auth::user();
@@ -125,9 +129,9 @@ class BookingController extends Controller
             ->with(['event', 'items'])
             ->withCount('tickets');
 
-        if (request()->filled('status')) {
-            $query->where('status', request()->input('status'));
-        }
+        $this->applyFilters($query, $request, [
+            'status' => 'status',
+        ]);
 
         $bookings = $query->orderBy('created_at', 'desc')->paginate(15);
 

@@ -1,23 +1,14 @@
 <?php
 
+use App\Enums\AiGenerationStatus;
 use App\Enums\UserRole;
+use App\Models\AiGeneration;
 use App\Models\User;
 use Illuminate\Support\Facades\Queue;
 
 beforeEach(function () {
     $this->user = User::factory()->create(['role' => UserRole::Organizer]);
-    config(['ai-event-copilot.enabled' => false]); // prevent real API calls
-});
-
-it('validates generate-draft with valid payload', function () {
-    $response = $this->actingAs($this->user)->postJson(route('organizer.ai.event-drafts'), [
-        'brief' => 'A music concert in Casablanca',
-        'tone' => 'professional',
-        'language' => 'en',
-    ]);
-
-    // Feature is disabled, so it returns 403 — not 422
-    $response->assertStatus(403);
+    config(['ai-event-copilot.enabled' => true]);
 });
 
 it('rejects brief exceeding max length', function () {
@@ -105,8 +96,13 @@ it('validates transform with valid payload', function () {
 });
 
 it('rejects feedback with invalid action', function () {
+    $generation = AiGeneration::factory()->create([
+        'user_id' => $this->user->id,
+        'status' => AiGenerationStatus::SUCCESS,
+    ]);
+
     $response = $this->actingAs($this->user)->postJson(
-        route('organizer.ai.generations.feedback', ['generation' => 'nonexistent']),
+        route('organizer.ai.generations.feedback', ['generation' => $generation->public_id]),
         ['action' => 'invalid_action'],
     );
 
@@ -115,8 +111,13 @@ it('rejects feedback with invalid action', function () {
 });
 
 it('requires field when action is applied_field', function () {
+    $generation = AiGeneration::factory()->create([
+        'user_id' => $this->user->id,
+        'status' => AiGenerationStatus::SUCCESS,
+    ]);
+
     $response = $this->actingAs($this->user)->postJson(
-        route('organizer.ai.generations.feedback', ['generation' => 'nonexistent']),
+        route('organizer.ai.generations.feedback', ['generation' => $generation->public_id]),
         ['action' => 'applied_field'],
     );
 
@@ -125,8 +126,13 @@ it('requires field when action is applied_field', function () {
 });
 
 it('rejects field with invalid value', function () {
+    $generation = AiGeneration::factory()->create([
+        'user_id' => $this->user->id,
+        'status' => AiGenerationStatus::SUCCESS,
+    ]);
+
     $response = $this->actingAs($this->user)->postJson(
-        route('organizer.ai.generations.feedback', ['generation' => 'nonexistent']),
+        route('organizer.ai.generations.feedback', ['generation' => $generation->public_id]),
         ['action' => 'applied_field', 'field' => 'invalid_field'],
     );
 
@@ -144,8 +150,8 @@ it('accepts draft event_context.description exactly at the configured limit', fu
         ],
     ]);
 
-    // Valid payload, feature disabled → 403 (not 422).
-    $response->assertStatus(403);
+    // Valid payload at the limit → accepted (202), not rejected (422).
+    $response->assertStatus(202);
 });
 
 it('rejects draft event_context.description above the configured limit', function () {
@@ -164,7 +170,6 @@ it('rejects draft event_context.description above the configured limit', functio
 
 it('never dispatches a job when the context payload exceeds the limit', function () {
     Queue::fake();
-    config(['ai-event-copilot.enabled' => true]);
 
     $response = $this->actingAs($this->user)->postJson(route('organizer.ai.event-drafts'), [
         'brief' => 'A music concert',

@@ -14,7 +14,6 @@ use App\Http\Controllers\Organizer\EventController as OrganizerEventController;
 use App\Http\Controllers\Organizer\TicketTypeController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Public\EventController as PublicEventController;
-use App\Http\Controllers\Public\NewsletterController;
 use App\Http\Controllers\User\BookingController as UserBookingController;
 use App\Http\Controllers\User\TicketController;
 use Illuminate\Support\Facades\Auth;
@@ -23,7 +22,6 @@ use Illuminate\Support\Facades\Route;
 // ── Public routes ──
 Route::get('/', [PublicEventController::class, 'index'])->name('events.index');
 Route::get('/events/{event:slug}', [PublicEventController::class, 'show'])->name('events.show');
-Route::post('/newsletter', [NewsletterController::class, 'store'])->name('newsletter.store');
 
 Route::get('/dashboard', function () {
     $role = Auth::user()->role;
@@ -81,11 +79,11 @@ Route::middleware(['auth', 'role:organizer'])->prefix('organizer')->name('organi
     Route::get('events/{event}/bookings', [OrganizerBookingController::class, 'index'])->name('bookings.index');
 
     // AI Event Copilot
-    Route::prefix('ai')->name('ai.')->group(function () {
+    Route::prefix('ai')->name('ai.')->middleware('ai.enabled')->group(function () {
         Route::post('event-drafts', [EventAiController::class, 'generateDraft'])->name('event-drafts');
         Route::post('event-fields/transform', [EventAiController::class, 'transformField'])->name('event-fields.transform');
         Route::get('generations/{generation:public_id}', [EventAiController::class, 'status'])->name('generations.status');
-        Route::post('generations/{generation}/feedback', [EventAiController::class, 'recordFeedback'])->name('generations.feedback');
+        Route::post('generations/{generation:public_id}/feedback', [EventAiController::class, 'recordFeedback'])->name('generations.feedback');
     });
 });
 
