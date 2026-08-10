@@ -6,7 +6,6 @@ use App\Enums\UserRole;
 use App\Jobs\ProcessAiGenerationJob;
 use App\Models\AiGeneration;
 use App\Models\User;
-use App\Services\Ai\AiGenerationRecorder;
 use App\Services\Ai\AiGenerationService;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Cache;
@@ -284,26 +283,6 @@ it('does not dispatch job when copilot is disabled', function () {
     Queue::assertNotPushed(ProcessAiGenerationJob::class);
 });
 
-it('does not dispatch job when rate limited', function () {
-    config(['ai-event-copilot.enabled' => true]);
-
-    $recorder = app(AiGenerationRecorder::class);
-    for ($i = 0; $i < 5; $i++) {
-        $recorder->incrementMinuteCount($this->user->id);
-    }
-
-    Queue::fake();
-
-    $response = $this->actingAs($this->user)->postJson(route('organizer.ai.event-drafts'), [
-        'brief' => 'A music concert',
-        'tone' => 'professional',
-        'language' => 'en',
-    ]);
-
-    $response->assertStatus(429);
-    Queue::assertNotPushed(ProcessAiGenerationJob::class);
-});
-
 it('stores result data on generation for polling', function () {
     GenerateEventDraftAgent::fake([
         [
@@ -458,32 +437,4 @@ it('never re-executes an already-successful generation', function () {
     $generation->refresh();
     expect($generation->status)->toBe(AiGenerationStatus::SUCCESS)
         ->and($generation->result)->toBe($result);
-});
-
-it('does not duplicate usage counters across retry attempts', function () {
-    GenerateEventDraftAgent::fake([
-        [
-            'title' => 'Retried Event',
-            'description' => 'Retried description.',
-            'category_id' => null,
-            'marketing' => ['social_post' => 'x', 'email_subject' => 'x', 'email_intro' => 'x'],
-            'missing_information' => [],
-        ],
-    ]);
-
-    $this->actingAs($this->user)->postJson(route('organizer.ai.event-drafts'), [
-        'brief' => 'A retried test',
-        'tone' => 'professional',
-        'language' => 'en',
-    ])->assertStatus(202);
-
-    $recorder = app(AiGenerationRecorder::class);
-
-    // The dispatch reserved one slot. Simulate a retry execution cycle:
-    // usage counters must not grow.
-    $generation = AiGeneration::where('user_id', $this->user->id)->firstOrFail();
-    app(AiGenerationService::class)->execute($generation);
-
-    expect($recorder->getDailyCount($this->user->id))->toBe(1)
-        ->and($recorder->getMinuteCount($this->user->id))->toBe(1);
 });

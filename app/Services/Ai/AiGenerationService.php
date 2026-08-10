@@ -251,8 +251,7 @@ class AiGenerationService
             'ai_invalid_response' => 'The AI returned an invalid response. Please try again.',
             'ai_provider_unavailable' => 'The AI service is temporarily unavailable. Please try again later.',
             'ai_generation_timeout' => 'The AI request timed out. Please try again.',
-            'ai_rate_limited' => 'Too many requests. Please wait a moment.',
-            'ai_daily_limit_reached' => 'You have reached your daily AI generation limit.',
+
             default => null,
         };
     }

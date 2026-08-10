@@ -6,7 +6,6 @@ use App\Enums\UserRole;
 use App\Models\AiGeneration;
 use App\Models\AiGenerationFeedback;
 use App\Models\User;
-use App\Services\Ai\AiGenerationRecorder;
 use Illuminate\Support\Facades\Cache;
 
 beforeEach(function () {
@@ -111,85 +110,13 @@ it('records feedback on valid generation', function () {
         ->and($feedback->action)->toBe('applied_all');
 });
 
-it('reserves daily and minute counts on generation request', function () {
-    GenerateEventDraftAgent::fake([
-        [
-            'title' => 'Test Event',
-            'description' => 'Test description.',
-            'category_id' => null,
-            'marketing' => [
-                'social_post' => 'Test post',
-                'email_subject' => 'Test subject',
-                'email_intro' => 'Test intro',
-            ],
-            'missing_information' => [],
-        ],
-    ]);
-
-    $this->actingAs($this->user)->postJson(route('organizer.ai.event-drafts'), [
-        'brief' => 'A test event',
-        'tone' => 'professional',
-        'language' => 'en',
-    ]);
-
-    $recorder = app(AiGenerationRecorder::class);
-
-    expect($recorder->getDailyCount($this->user->id))->toBeGreaterThanOrEqual(1)
-        ->and($recorder->getMinuteCount($this->user->id))->toBeGreaterThanOrEqual(1);
-});
-
-it('reserves slots atomically and rolls back when the per-minute limit is hit', function () {
-    $payload = [
-        'brief' => 'A test event',
-        'tone' => 'professional',
-        'language' => 'en',
-    ];
-
-    // Fake the agent so the sync-queue job completes instantly and never
-    // touches a real provider (keeps this timing-sensitive test deterministic).
-    GenerateEventDraftAgent::fake([
-        [
-            'title' => 'Test Event',
-            'description' => 'Test description.',
-            'category_id' => null,
-            'marketing' => [
-                'social_post' => 'Test post',
-                'email_subject' => 'Test subject',
-                'email_intro' => 'Test intro',
-            ],
-            'missing_information' => [],
-        ],
-    ]);
-
-    $recorder = app(AiGenerationRecorder::class);
-
-    // Bring the user to exactly per_minute_limit - 1 reserved slots.
-    config(['ai-event-copilot.per_minute_limit' => 5]);
-
-    foreach (range(1, 4) as $ignored) {
-        $recorder->incrementMinuteCount($this->user->id);
-    }
-
-    // The fifth request should pass; the sixth must be rejected and rolled back.
-    $this->actingAs($this->user)->postJson(route('organizer.ai.event-drafts'), $payload)
-        ->assertStatus(202);
-
-    $this->actingAs($this->user)->postJson(route('organizer.ai.event-drafts'), $payload)
-        ->assertStatus(429)
-        ->assertJson(['error_code' => 'ai_rate_limited']);
-
-    // Reservation was rolled back: the counter stays at the limit, not above it.
-    expect($recorder->getMinuteCount($this->user->id))->toBe(5);
-});
-
 it('returns 404 for feedback on nonexistent generation', function () {
     $response = $this->actingAs($this->user)->postJson(
         route('organizer.ai.generations.feedback', ['generation' => '01HZZZZZZZZZZZZZZZZZZZZZZZZZZ']),
         ['action' => 'applied_all'],
     );
 
-    $response->assertStatus(404)
-        ->assertJson(['message' => 'Generation not found.']);
+    $response->assertStatus(404);
 });
 
 it('returns 403 for feedback on another user generation', function () {

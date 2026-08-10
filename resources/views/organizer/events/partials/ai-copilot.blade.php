@@ -271,8 +271,7 @@ window.aixCopilotState = function () {
     mapError(body, status) {
         var table = {
             ai_feature_disabled: 'AI Event Copilot is disabled.',
-            ai_rate_limited: 'You have made several AI requests. Try again shortly.',
-            ai_daily_limit_reached: "You have reached today's AI-generation limit. You can still complete the event manually.",
+
             ai_generation_timeout: 'The AI assistant took too long to respond. Please try again.',
             ai_provider_refused: 'The AI assistant is temporarily unavailable. Your event form has not been changed.',
             ai_provider_unavailable: 'The AI assistant is temporarily unavailable. Your event form has not been changed.',
