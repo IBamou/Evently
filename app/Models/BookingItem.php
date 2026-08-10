@@ -3,7 +3,6 @@
 namespace App\Models;
 
 use Carbon\Carbon;
-use Database\Factories\BookingItemFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -22,7 +21,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  */
 class BookingItem extends Model
 {
-    /** @use HasFactory<BookingItemFactory> */
+    /** @use HasFactory */
     use HasFactory;
 
     protected $fillable = [
@@ -42,25 +41,16 @@ class BookingItem extends Model
         ];
     }
 
-    /**
-     * @return BelongsTo<Booking, $this>
-     */
     public function booking(): BelongsTo
     {
         return $this->belongsTo(Booking::class);
     }
 
-    /**
-     * @return BelongsTo<TicketType, $this>
-     */
     public function ticketType(): BelongsTo
     {
         return $this->belongsTo(TicketType::class);
     }
 
-    /**
-     * @return HasMany<Ticket, $this>
-     */
     public function tickets(): HasMany
     {
         return $this->hasMany(Ticket::class);

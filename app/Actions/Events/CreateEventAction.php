@@ -11,8 +11,6 @@ class CreateEventAction
 {
     /**
      * Create a new event in draft status for the given organizer.
-     *
-     * @param  array<string, mixed>  $data
      */
     public function __invoke(User $organizer, array $data): Event
     {

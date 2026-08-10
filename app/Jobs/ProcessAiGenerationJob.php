@@ -25,8 +25,6 @@ class ProcessAiGenerationJob implements ShouldQueue
 
     /**
      * The number of seconds to wait before retrying the job.
-     *
-     * @var list<int>
      */
     public array $backoff = [10, 30];
 

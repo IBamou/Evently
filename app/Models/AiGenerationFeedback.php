@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use Database\Factories\AiGenerationFeedbackFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -17,19 +16,16 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class AiGenerationFeedback extends Model
 {
-    /** @use HasFactory<AiGenerationFeedbackFactory> */
+    /** @use HasFactory */
     use HasFactory;
 
-    /** @var list<string> */
+    /** @var array */
     protected $fillable = [
         'generation_id',
         'action',
         'field',
     ];
 
-    /**
-     * @return BelongsTo<AiGeneration, $this>
-     */
     public function generation(): BelongsTo
     {
         return $this->belongsTo(AiGeneration::class, 'generation_id');

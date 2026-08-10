@@ -7,9 +7,6 @@ use Illuminate\Contracts\JsonSchema\JsonSchema;
 
 class EventDraftSchema implements AiSchema
 {
-    /**
-     * @return array<string, mixed>
-     */
     public function schema(JsonSchema $schema): array
     {
         return [
@@ -26,9 +23,6 @@ class EventDraftSchema implements AiSchema
     }
 
     /**
-     * @param  array<string, mixed>  $data
-     * @return array{title: string, description: string, category_id: int|null, marketing: array{social_post: string, email_subject: string, email_intro: string}, missing_information: list<string>}
-     *
      * @throws \RuntimeException
      */
     public function validate(array $data): array
@@ -49,7 +43,7 @@ class EventDraftSchema implements AiSchema
             $categoryId = null;
         }
 
-        /** @var array<string, mixed> $marketingRaw */
+        /** @var array $marketingRaw */
         $marketingRaw = is_array($data['marketing'] ?? null) ? $data['marketing'] : [];
 
         $marketing = [
@@ -58,7 +52,7 @@ class EventDraftSchema implements AiSchema
             'email_intro' => is_string($marketingRaw['email_intro'] ?? null) ? $marketingRaw['email_intro'] : '',
         ];
 
-        /** @var list<string> $missingInformation */
+        /** @var array $missingInformation */
         $missingInformation = array_values(
             array_filter(
                 is_array($data['missing_information'] ?? null) ? $data['missing_information'] : [],

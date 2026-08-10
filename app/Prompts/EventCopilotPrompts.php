@@ -4,10 +4,6 @@ namespace App\Prompts;
 
 class EventCopilotPrompts
 {
-    /**
-     * @param  list<array{id: int, name: string, slug: string}>  $categories
-     * @return list<string>
-     */
     public static function generateDraft(array $categories, string $promptVersion): array
     {
         $categoryList = collect($categories)->map(

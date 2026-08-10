@@ -3,7 +3,6 @@
 namespace App\Models;
 
 use App\Enums\UserRole;
-use Database\Factories\UserFactory;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -17,13 +16,13 @@ use Illuminate\Notifications\Notifiable;
  */
 class User extends Authenticatable implements MustVerifyEmail
 {
-    /** @use HasFactory<UserFactory> */
+    /** @use HasFactory */
     use HasFactory, Notifiable;
 
     /**
      * The attributes that are mass assignable.
      *
-     * @var list<string>
+     * @var array
      */
     protected $fillable = [
         'name',
@@ -35,7 +34,7 @@ class User extends Authenticatable implements MustVerifyEmail
     /**
      * The attributes that should be hidden for serialization.
      *
-     * @var list<string>
+     * @var array
      */
     protected $hidden = [
         'password',
@@ -44,8 +43,6 @@ class User extends Authenticatable implements MustVerifyEmail
 
     /**
      * Get the attributes that should be cast.
-     *
-     * @return array<string, string>
      */
     protected function casts(): array
     {
@@ -72,25 +69,16 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->role === UserRole::Organizer;
     }
 
-    /**
-     * @return HasMany<Event, $this>
-     */
     public function events(): HasMany
     {
         return $this->hasMany(Event::class, 'organizer_id');
     }
 
-    /**
-     * @return HasMany<Booking, $this>
-     */
     public function bookings(): HasMany
     {
         return $this->hasMany(Booking::class);
     }
 
-    /**
-     * @return HasMany<Ticket, $this>
-     */
     public function tickets(): HasMany
     {
         return $this->hasMany(Ticket::class);

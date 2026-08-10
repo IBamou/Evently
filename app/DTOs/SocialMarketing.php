@@ -10,7 +10,6 @@ readonly class SocialMarketing
         public string $emailIntro,
     ) {}
 
-    /** @return array{social_post: string, email_subject: string, email_intro: string} */
     public function toArray(): array
     {
         return [

@@ -7,9 +7,6 @@ use Illuminate\Contracts\JsonSchema\JsonSchema;
 
 class FieldTransformSchema implements AiSchema
 {
-    /**
-     * @return array<string, mixed>
-     */
     public function schema(JsonSchema $schema): array
     {
         return [
@@ -20,9 +17,6 @@ class FieldTransformSchema implements AiSchema
     }
 
     /**
-     * @param  array<string, mixed>  $data
-     * @return array{content: string, language: string, warnings: list<string>}
-     *
      * @throws \RuntimeException
      */
     public function validate(array $data): array
@@ -38,7 +32,7 @@ class FieldTransformSchema implements AiSchema
             throw new \RuntimeException('AI response missing required field: language.');
         }
 
-        /** @var list<string> $warnings */
+        /** @var array $warnings */
         $warnings = array_values(
             array_filter(
                 is_array($data['warnings'] ?? null) ? $data['warnings'] : [],

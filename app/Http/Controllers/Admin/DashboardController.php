@@ -88,8 +88,6 @@ class DashboardController extends Controller
      * Build the last-5-weeks revenue/tickets series for the dashboard chart.
      *
      * Platform-wide (no event scope), mirroring organizer's chartSeries().
-     *
-     * @return array<int, array{label: string, revH: string, tixH: string, revLabel: string, tixLabel: string}>
      */
     private function chartSeries(): array
     {
@@ -132,8 +130,6 @@ class DashboardController extends Controller
      * Aggregate ticket quantities per event category for the dashboard.
      *
      * Platform-wide (no event scope), mirroring organizer's categoryBars().
-     *
-     * @return array<int, array{label: string, value: string, pct: string, color: string}>
      */
     private function categoryBars(): array
     {

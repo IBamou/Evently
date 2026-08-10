@@ -4,7 +4,6 @@ namespace App\Models;
 
 use App\Enums\TicketStatus;
 use Carbon\Carbon;
-use Database\Factories\TicketFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -28,7 +27,7 @@ use Illuminate\Support\Str;
  */
 class Ticket extends Model
 {
-    /** @use HasFactory<TicketFactory> */
+    /** @use HasFactory */
     use HasFactory;
 
     protected $fillable = [
@@ -67,49 +66,31 @@ class Ticket extends Model
         return $code;
     }
 
-    /**
-     * @return BelongsTo<Booking, $this>
-     */
     public function booking(): BelongsTo
     {
         return $this->belongsTo(Booking::class);
     }
 
-    /**
-     * @return BelongsTo<BookingItem, $this>
-     */
     public function bookingItem(): BelongsTo
     {
         return $this->belongsTo(BookingItem::class);
     }
 
-    /**
-     * @return BelongsTo<TicketType, $this>
-     */
     public function ticketType(): BelongsTo
     {
         return $this->belongsTo(TicketType::class);
     }
 
-    /**
-     * @return BelongsTo<Event, $this>
-     */
     public function event(): BelongsTo
     {
         return $this->belongsTo(Event::class);
     }
 
-    /**
-     * @return BelongsTo<User, $this>
-     */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }
 
-    /**
-     * @return BelongsTo<User, $this>
-     */
     public function checkedInBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'checked_in_by');

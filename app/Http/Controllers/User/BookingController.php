@@ -80,7 +80,7 @@ class BookingController extends Controller
         try {
             $validated = $request->validated();
 
-            /** @var array{event_id: int, items: array<int, array{ticket_type_id: int, quantity: int}>, idempotency_key?: string, payment?: array{card_number?: string, expiry?: string, cvc?: string}} $validated */
+            /** @var array $validated */
             $booking = $service->create($user, $validated);
 
             // Mock payment: if paid event with valid card submitted, confirm immediately.

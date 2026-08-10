@@ -10,9 +10,6 @@ use Laravel\Ai\Contracts\Agent;
 
 class EventFieldTransformGenerator extends EventGenerator
 {
-    /**
-     * @param  array<string, mixed>  $inputs
-     */
     protected function buildAgent(array $inputs): Agent
     {
         return new TransformEventFieldAgent(
@@ -35,11 +32,6 @@ class EventFieldTransformGenerator extends EventGenerator
         return app(FieldTransformSchema::class);
     }
 
-    /**
-     * @param  array<string, mixed>  $data
-     * @param  array<string, mixed>  $inputs
-     * @return array<string, mixed>
-     */
     protected function mapResult(array $data, array $inputs): array
     {
         $result = new FieldTransformResult(

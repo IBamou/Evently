@@ -11,8 +11,6 @@ class UpdateEventAction
 {
     /**
      * Update an existing event with validated data.
-     *
-     * @param  array<string, mixed>  $data
      */
     public function __invoke(Event $event, array $data): Event
     {

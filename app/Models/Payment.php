@@ -4,7 +4,6 @@ namespace App\Models;
 
 use App\Enums\PaymentStatus;
 use Carbon\Carbon;
-use Database\Factories\PaymentFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -18,13 +17,13 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string $amount
  * @property string $currency
  * @property Carbon|null $paid_at
- * @property array<string, mixed> $metadata
+ * @property array $metadata
  * @property Carbon $created_at
  * @property Carbon $updated_at
  */
 class Payment extends Model
 {
-    /** @use HasFactory<PaymentFactory> */
+    /** @use HasFactory */
     use HasFactory;
 
     protected $fillable = [
@@ -48,9 +47,6 @@ class Payment extends Model
         ];
     }
 
-    /**
-     * @return BelongsTo<Booking, $this>
-     */
     public function booking(): BelongsTo
     {
         return $this->belongsTo(Booking::class);

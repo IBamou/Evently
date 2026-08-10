@@ -21,8 +21,6 @@ trait FiltersAndSorts
      *       'description',
      *       fn ($q, $search) => $q->orWhereHas('user', fn ($u) => $u->where('name', 'like', "%{$search}%")),
      *   ]);
-     *
-     * @param  array<int, string|Closure(Builder, string): void>  $searchableFields
      */
     protected function applySearch(Builder|Relation $query, Request $request, array $searchableFields): void
     {
@@ -47,8 +45,6 @@ trait FiltersAndSorts
      * Apply one of the whitelisted sort orders using the "-field" convention
      * (e.g. "-starts_at" for descending). Unknown values fall back to the
      * given default sort key.
-     *
-     * @param  array<int, string>  $sortableFields
      */
     protected function applySort(Builder|Relation $query, Request $request, array $sortableFields, string $default = 'created_at'): void
     {
@@ -83,8 +79,6 @@ trait FiltersAndSorts
      *       'date_from' => fn ($q, $v) => $q->where('created_at', '>=', $v),
      *       'date_to' => fn ($q, $v) => $q->where('created_at', '<=', $v),
      *   ]);
-     *
-     * @param  array<string, string|Closure(Builder, mixed): void>  $filterMap
      */
     protected function applyFilters(Builder|Relation $query, Request $request, array $filterMap): void
     {

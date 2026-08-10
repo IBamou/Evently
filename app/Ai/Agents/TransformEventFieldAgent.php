@@ -17,9 +17,6 @@ class TransformEventFieldAgent implements Agent, HasStructuredOutput
 
     private string $systemPrompt;
 
-    /**
-     * @param  array<string, mixed>  $eventContext
-     */
     public function __construct(
         string $field,
         string $operation,
@@ -48,9 +45,6 @@ class TransformEventFieldAgent implements Agent, HasStructuredOutput
         return app(FieldTransformSchema::class);
     }
 
-    /**
-     * @param  array<string, mixed>  $eventContext
-     */
     private function buildUserContext(
         string $field,
         string $operation,

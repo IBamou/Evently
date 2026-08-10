@@ -76,8 +76,6 @@ class CheckInController extends Controller
      * Live door stats: how many tickets were checked in, issued in total, and
      * still remaining. Reused by the page render and by the scan JSON response
      * so the view can refresh the counters without a full reload.
-     *
-     * @return array{checked_in: int, issued: int, remaining: int}
      */
     private function statsFor(Event $event): array
     {

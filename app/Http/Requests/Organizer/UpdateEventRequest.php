@@ -4,7 +4,6 @@ namespace App\Http\Requests\Organizer;
 
 use App\Models\Event;
 use Carbon\Carbon;
-use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Validator;
 
@@ -21,7 +20,7 @@ class UpdateEventRequest extends FormRequest
     /**
      * Get the validation rules that apply to the request.
      *
-     * @return array<string, ValidationRule|array<mixed>|string>
+     * @return array|string>
      */
     public function rules(): array
     {

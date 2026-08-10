@@ -17,8 +17,6 @@ class DashboardService
 {
     /**
      * Build all data for the organizer dashboard.
-     *
-     * @return array{stats: array<string, int>, revenue: float, ticketsIssued: int, ticketsChecked: int, checkInRate: int, orders: Collection<int, array{buyer: string, initial: string, event: string, qty: float|int|numeric-string, total: float, status: 'Cancelled'|'Expired'|'Paid'|'Pending'}>, chart: array<int, array{label: string, revH: string, tixH: string, revLabel: string, tixLabel: string}>, catBars: array<int, array{label: string, value: string, pct: string, color: string}>}
      */
     public function buildDashboardData(User $user): array
     {
@@ -86,9 +84,6 @@ class DashboardService
 
     /**
      * Build the last-5-weeks revenue/tickets series for the dashboard chart.
-     *
-     * @param  Collection<int, int>  $eventIds
-     * @return array<int, array{label: string, revH: string, tixH: string, revLabel: string, tixLabel: string}>
      */
     private function chartSeries(Collection $eventIds): array
     {
@@ -131,9 +126,6 @@ class DashboardService
 
     /**
      * Aggregate ticket quantities per event category for the dashboard.
-     *
-     * @param  Collection<int, int>  $eventIds
-     * @return array<int, array{label: string, value: string, pct: string, color: string}>
      */
     private function categoryBars(Collection $eventIds): array
     {

@@ -10,10 +10,6 @@ abstract class EventGenerator
 {
     /**
      * Run the agent for this generator and return the mapped result.
-     *
-     * @param  array<string, mixed>  $inputs
-     * @param  array<string, mixed>  $config
-     * @return array<string, mixed>
      */
     public function generate(array $inputs, AiProviderRoute $route, array $config): array
     {
@@ -27,28 +23,16 @@ abstract class EventGenerator
         );
     }
 
-    /**
-     * @param  array<string, mixed>  $inputs
-     */
     abstract protected function buildAgent(array $inputs): Agent;
 
     abstract protected function promptText(): string;
 
     abstract protected function schema(): AiSchema;
 
-    /**
-     * @param  array<string, mixed>  $data
-     * @param  array<string, mixed>  $inputs
-     * @return array<string, mixed>
-     */
     abstract protected function mapResult(array $data, array $inputs): array;
 
     /**
      * Run the agent prompt and decode its structured output.
-     *
-     * @param  array<string, mixed>  $config
-     * @param  callable(array<string, mixed>): array<string, mixed>  $map
-     * @return array<string, mixed>
      */
     private function runAgentFlow(Agent $agent, string $promptText, AiProviderRoute $route, array $config, AiSchema $schema, callable $map): array
     {
@@ -70,8 +54,6 @@ abstract class EventGenerator
      * A null or non-decodable payload is treated as an invalid structured
      * output: a permanent (non-retryable) failure so the generation ends in
      * ERROR instead of silently persisting an empty result.
-     *
-     * @return array<string, mixed>
      */
     private function decodeStructuredResponse(?string $text, AiSchema $schema): array
     {

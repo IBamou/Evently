@@ -4,7 +4,6 @@ namespace App\Models;
 
 use App\Enums\BookingStatus;
 use Carbon\Carbon;
-use Database\Factories\TicketTypeFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -30,7 +29,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  */
 class TicketType extends Model
 {
-    /** @use HasFactory<TicketTypeFactory> */
+    /** @use HasFactory */
     use HasFactory, SoftDeletes;
 
     protected $fillable = [
@@ -57,25 +56,16 @@ class TicketType extends Model
         ];
     }
 
-    /**
-     * @return BelongsTo<Event, $this>
-     */
     public function event(): BelongsTo
     {
         return $this->belongsTo(Event::class);
     }
 
-    /**
-     * @return HasMany<BookingItem, $this>
-     */
     public function bookingItems(): HasMany
     {
         return $this->hasMany(BookingItem::class);
     }
 
-    /**
-     * @return HasMany<Ticket, $this>
-     */
     public function tickets(): HasMany
     {
         return $this->hasMany(Ticket::class);

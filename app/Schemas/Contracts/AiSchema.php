@@ -8,8 +8,6 @@ interface AiSchema
 {
     /**
      * Return the JsonSchema array for the AI provider's structured output.
-     *
-     * @return array<string, mixed>
      */
     public function schema(JsonSchema $schema): array;
 
@@ -18,8 +16,6 @@ interface AiSchema
      *
      * Returns the cleaned data array on success, throws \RuntimeException on failure.
      *
-     * @param  array<string, mixed>  $data
-     * @return array<string, mixed>
      *
      * @throws \RuntimeException
      */

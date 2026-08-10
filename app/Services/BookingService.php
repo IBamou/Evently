@@ -25,7 +25,7 @@ class BookingService
      * + payment record, idempotency key, transaction+lockForUpdate, 409
      * insufficient_capacity.
      *
-     * @param  array{event_id: int, items: array<int, array{ticket_type_id: int, quantity: int}>, idempotency_key?: string}  $data
+     * @param array>, idempotency_key?: string}  $data
      */
     public function create(User $user, array $data): Booking
     {
@@ -215,7 +215,7 @@ class BookingService
      * was persisted): same event within 15 minutes with the exact same
      * selection (same ticket type count, same types, same total quantity).
      *
-     * @param  array{event_id: int, items: array<int, array{ticket_type_id: int, quantity: int}>, idempotency_key?: string}  $data
+     * @param array>, idempotency_key?: string}  $data
      */
     private function findExistingBooking(User $user, Event $event, array $data): ?Booking
     {

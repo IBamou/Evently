@@ -101,8 +101,6 @@ class EventController extends Controller
 
     /**
      * Top cities by ticket volume for the reports tab.
-     *
-     * @return array<int, array{label: string, value: int, pct: string}>
      */
     private function cityBars(): array
     {
@@ -131,8 +129,6 @@ class EventController extends Controller
 
     /**
      * Compute report summary stats for the admin reports tab.
-     *
-     * @return array{grossVolume: float, activeUsers: int, organizers: int, refundRate: float}
      */
     private function reportStats(): array
     {

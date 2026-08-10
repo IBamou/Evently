@@ -21,8 +21,6 @@ class AiGenerationService
 
     /**
      * Create a new generation record in Processing status.
-     *
-     * @param  array<string, mixed>  $inputs
      */
     public function create(string $operation, array $inputs, User $user): AiGeneration
     {
@@ -152,8 +150,6 @@ class AiGenerationService
 
     /**
      * Build the status payload for the polling endpoint.
-     *
-     * @return array{generation_id: string, status: string, result: array<string, mixed>|null, error_code: string|null, error_message: string|null, operation: string, provider_used: string|null, model_used: string|null, latency_ms: int|null}
      */
     public function statusPayload(AiGeneration $generation): array
     {
@@ -172,14 +168,12 @@ class AiGenerationService
 
     /**
      * Run the appropriate generation service for the given operation.
-     *
-     * @return array<string, mixed>
      */
     private function runAgent(AiGeneration $generation, AiProviderRoute $route): array
     {
         $inputs = $this->loadInputs($generation);
 
-        /** @var array<string, mixed> $config */
+        /** @var array $config */
         $config = config('ai-event-copilot');
 
         return $this->generatorFor($generation->operation)->generate($inputs, $route, $config);
@@ -203,8 +197,6 @@ class AiGenerationService
      * row. Legacy rows created before that column existed fall back to the
      * cache entry and, when found, are persisted back to the database so the
      * cache is no longer required for execution.
-     *
-     * @return array<string, mixed>
      */
     private function loadInputs(AiGeneration $generation): array
     {
@@ -233,8 +225,6 @@ class AiGenerationService
      * exclusively from validated FormRequests. The payload is retained for
      * the lifetime of the ai_generations row and is used for execution only;
      * input_hash remains available for analytics and deduplication.
-     *
-     * @param  array<string, mixed>  $inputs
      */
     public function storeInputs(AiGeneration $generation, array $inputs): void
     {

@@ -17,10 +17,6 @@ class GenerateEventDraftAgent implements Agent, HasStructuredOutput
 
     private string $systemPrompt;
 
-    /**
-     * @param  array<string, mixed>  $eventContext
-     * @param  list<array{id: int, name: string, slug: string}>  $categories
-     */
     public function __construct(
         string $brief,
         ?string $audience,
@@ -50,9 +46,6 @@ class GenerateEventDraftAgent implements Agent, HasStructuredOutput
         return app(EventDraftSchema::class);
     }
 
-    /**
-     * @param  array<string, mixed>  $eventContext
-     */
     private function buildUserContext(
         string $brief,
         ?string $audience,

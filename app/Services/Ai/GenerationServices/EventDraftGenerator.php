@@ -15,14 +15,9 @@ class EventDraftGenerator extends EventGenerator
     /**
      * Categories are loaded once and reused for the agent context and the
      * category_id validation in mapResult().
-     *
-     * @var list<array{id: int, name: string, slug: string}>
      */
     private array $categories = [];
 
-    /**
-     * @param  array<string, mixed>  $inputs
-     */
     protected function buildAgent(array $inputs): Agent
     {
         $this->categories = array_values(Category::select('id', 'name', 'slug')->get()->toArray());
@@ -47,11 +42,6 @@ class EventDraftGenerator extends EventGenerator
         return app(EventDraftSchema::class);
     }
 
-    /**
-     * @param  array<string, mixed>  $data
-     * @param  array<string, mixed>  $inputs
-     * @return array<string, mixed>
-     */
     protected function mapResult(array $data, array $inputs): array
     {
         $categoryId = $data['category_id'] ?? null;
@@ -63,7 +53,7 @@ class EventDraftGenerator extends EventGenerator
             }
         }
 
-        /** @var array<string, mixed> $marketing */
+        /** @var array $marketing */
         $marketing = $data['marketing'] ?? [];
 
         $result = new EventDraftResult(

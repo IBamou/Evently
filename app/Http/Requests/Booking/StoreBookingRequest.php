@@ -22,7 +22,7 @@ class StoreBookingRequest extends FormRequest
      */
     protected function prepareForValidation(): void
     {
-        /** @var array<int, array<string, mixed>> $rawItems */
+        /** @var array $rawItems */
         $rawItems = $this->input('items', []);
 
         $items = collect($rawItems)
@@ -50,9 +50,6 @@ class StoreBookingRequest extends FormRequest
         }
     }
 
-    /**
-     * @return array<string, mixed>
-     */
     public function rules(): array
     {
         $requiresPayment = $this->computedTotal > 0;
@@ -106,9 +103,6 @@ class StoreBookingRequest extends FormRequest
         ];
     }
 
-    /**
-     * @return array<string, string>
-     */
     public function messages(): array
     {
         return [

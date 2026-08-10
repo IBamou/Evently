@@ -10,11 +10,11 @@ readonly class EventDraftResult
         /** @var array{id: int, name: string, slug: string}|null */
         public ?array $category,
         public SocialMarketing $marketing,
-        /** @var list<string> */
+        /** @var array */
         public array $missingInformation,
     ) {}
 
-    /** @return array{title: string, description: string, category: array{id: int, name: string, slug: string}|null, marketing: array{social_post: string, email_subject: string, email_intro: string}, missing_information: list<string>} */
+    /** @return array|null */
     public function toArray(): array
     {
         return [

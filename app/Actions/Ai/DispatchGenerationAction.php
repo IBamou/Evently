@@ -17,8 +17,6 @@ class DispatchGenerationAction
     /**
      * Create a generation record, persist inputs, dispatch the queue job,
      * and return the accepted response.
-     *
-     * @param  \Closure(FormRequest): array<string, mixed>  $inputExtractor
      */
     public function __invoke(
         FormRequest $request,

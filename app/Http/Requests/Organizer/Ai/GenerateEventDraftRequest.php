@@ -11,7 +11,7 @@ class GenerateEventDraftRequest extends FormRequest
         return true;
     }
 
-    /** @return array<string, array<int, string|string[]|int|null>> */
+    /** @return array> */
     public function rules(): array
     {
         $config = config('ai-event-copilot');

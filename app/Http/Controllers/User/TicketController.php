@@ -38,11 +38,11 @@ class TicketController extends Controller
             $query->where('status', $status);
         }
 
-        /** @var Collection<int, Ticket> $tickets */
+        /** @var Collection $tickets */
         $tickets = $query->limit(200)->get();
 
         // Unfiltered status counts for the status pills (single query, like User\BookingController).
-        /** @var Collection<string, int> $statusCounts */
+        /** @var Collection $statusCounts */
         $statusCounts = $user->tickets()
             ->selectRaw('status, count(*) as total')
             ->groupBy('status')
@@ -58,7 +58,7 @@ class TicketController extends Controller
         // Group tickets by event_id.
         $grouped = $tickets->groupBy('event_id');
 
-        /** @var Collection<int, array{event: Event, tickets: Collection<int, Ticket>, total: int, valid: int, used: int, cancelled: int}> $eventGroups */
+        /** @var Collection $eventGroups */
         $eventGroups = $grouped->map(function (Collection $eventTickets) {
             $firstTicket = $eventTickets->first();
 

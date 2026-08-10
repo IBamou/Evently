@@ -5,7 +5,6 @@ namespace App\Models;
 use App\Enums\EventFormat;
 use App\Enums\EventStatus;
 use Carbon\Carbon;
-use Database\Factories\EventFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -33,7 +32,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  */
 class Event extends Model
 {
-    /** @use HasFactory<EventFactory> */
+    /** @use HasFactory */
     use HasFactory, SoftDeletes;
 
     protected $fillable = [
@@ -60,26 +59,16 @@ class Event extends Model
         ];
     }
 
-    /**
-     * @return BelongsTo<User, $this>
-     */
     public function organizer(): BelongsTo
     {
         return $this->belongsTo(User::class, 'organizer_id');
     }
 
-    /**
-     * @return BelongsTo<Category, $this>
-     */
     public function category(): BelongsTo
     {
         return $this->belongsTo(Category::class);
     }
 
-    /**
-     * @param  Builder<Event>  $query
-     * @return Builder<Event>
-     */
     public function scopePublished(Builder $query): Builder
     {
         return $query->where('status', EventStatus::Published->value);
@@ -100,25 +89,16 @@ class Event extends Model
         return $this->isPublished() && $this->isUpcoming() && ! $this->trashed();
     }
 
-    /**
-     * @return HasMany<TicketType, $this>
-     */
     public function ticketTypes(): HasMany
     {
         return $this->hasMany(TicketType::class);
     }
 
-    /**
-     * @return HasMany<Booking, $this>
-     */
     public function bookings(): HasMany
     {
         return $this->hasMany(Booking::class);
     }
 
-    /**
-     * @return HasMany<Ticket, $this>
-     */
     public function tickets(): HasMany
     {
         return $this->hasMany(Ticket::class);
