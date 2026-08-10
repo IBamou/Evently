@@ -36,7 +36,7 @@ class ProcessAiGenerationJob implements ShouldQueue
     public function __construct(
         public AiGeneration $generation,
     ) {
-        $this->timeout = (int) (config('ai.timeout', 30)) + 10;
+        $this->timeout = (int) (config('ai.event_copilot.timeout', 30)) + 10;
         $this->queue = 'ai-copilot';
     }
 

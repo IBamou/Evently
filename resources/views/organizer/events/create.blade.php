@@ -10,7 +10,7 @@
         <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:6px">
             <h1 style="margin:0;font-size:28px;font-weight:800;letter-spacing:-.9px">Create an event</h1>
             <div style="flex:1"></div>
-            @if (config('ai.enabled'))
+            @if (config('ai.event_copilot.enabled'))
                 @include('organizer.events.partials.ai-copilot')
             @endif
         </div>

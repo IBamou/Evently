@@ -15,7 +15,7 @@ class EnsureAiEnabled
      */
     public function handle(Request $request, Closure $next): Response
     {
-        if (! config('ai.enabled')) {
+        if (! config('ai.event_copilot.enabled')) {
             return response()->json([
                 'message' => 'AI Event Copilot is disabled.',
                 'error_code' => 'ai_feature_disabled',

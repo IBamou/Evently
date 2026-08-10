@@ -4,101 +4,48 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | AI Event Copilot Feature Flag
+    | AI Event Copilot
     |--------------------------------------------------------------------------
     |
-    | Master toggle for the AI Event Copilot feature.
+    | App-specific configuration for the AI Event Copilot feature.
+    | Nested under its own key so it never clashes with the Laravel AI
+    | package keys (default, providers, caching, conversations...).
     |
     */
 
-    'enabled' => env('AI_EVENT_COPILOT_ENABLED', false),
+    'event_copilot' => [
+        'enabled' => env('AI_EVENT_COPILOT_ENABLED', false),
 
-    /*
-    |--------------------------------------------------------------------------
-    | Provider Configuration
-    |--------------------------------------------------------------------------
-    |
-    | The AI provider used by the copilot. The API key is resolved from
-    | AI_API_KEY, falling back to the provider's key in
-    | config/ai.php (e.g. OPENAI_API_KEY).
-    |
-    */
+        'provider' => env('AI_EVENT_COPILOT_PROVIDER', 'openai'),
 
-    'provider' => env('AI_EVENT_COPILOT_PROVIDER', 'openai'),
+        'model' => env('AI_EVENT_COPILOT_MODEL', 'gpt-4o-mini'),
 
-    'model' => env('AI_EVENT_COPILOT_MODEL', 'gpt-4o-mini'),
+        'api_key' => env('AI_EVENT_COPILOT_API_KEY'),
 
-    'api_key' => env('AI_EVENT_COPILOT_API_KEY'),
+        'fallback_provider' => env('AI_EVENT_COPILOT_FALLBACK_PROVIDER'),
 
-    /*
-    |--------------------------------------------------------------------------
-    | Fallback Provider
-    |--------------------------------------------------------------------------
-    |
-    | Used when the primary provider returns a transient failure (rate limit,
-    | timeouts, 5xx). The fallback model may differ from the primary one.
-    |
-    */
+        'fallback_model' => env('AI_EVENT_COPILOT_FALLBACK_MODEL'),
 
-    'fallback_provider' => env('AI_EVENT_COPILOT_FALLBACK_PROVIDER'),
+        'timeout' => (int) env('AI_EVENT_COPILOT_TIMEOUT', 30),
 
-    'fallback_model' => env('AI_EVENT_COPILOT_FALLBACK_MODEL'),
+        'prompt_version' => env('AI_EVENT_COPILOT_PROMPT_VERSION', 'event-copilot-v1'),
 
-    /*
-    |--------------------------------------------------------------------------
-    | Timeout
-    |--------------------------------------------------------------------------
-    |
-    | Maximum number of seconds to wait for an AI response.
-    |
-    */
+        'limits' => [
+            'brief_max' => 500,
+            'audience_max' => 200,
+            'field_content_max' => 5000,
+            'event_context_max' => 2000,
+        ],
 
-    'timeout' => (int) env('AI_EVENT_COPILOT_TIMEOUT', 30),
+        'languages' => ['en', 'fr', 'ar'],
 
-    /*
-    |--------------------------------------------------------------------------
-    | Prompt Version
-    |--------------------------------------------------------------------------
-    |
-    | Version tag stamped on every generation record for tracking.
-    |
-    */
+        'tones' => ['professional', 'friendly', 'energetic', 'formal', 'concise'],
 
-    'prompt_version' => env('AI_EVENT_COPILOT_PROMPT_VERSION', 'event-copilot-v1'),
+        'transform_operations' => ['rewrite', 'shorten', 'expand', 'translate'],
 
-    /*
-    |--------------------------------------------------------------------------
-    | Validation Limits
-    |--------------------------------------------------------------------------
-    |
-    | Maximum lengths for request inputs.
-    |
-    */
+        'transform_fields' => ['title', 'description'],
 
-    'limits' => [
-        'brief_max' => 500,
-        'audience_max' => 200,
-        'field_content_max' => 5000,
-        'event_context_max' => 2000,
+        'feedback_actions' => ['applied_field', 'applied_all', 'regenerated', 'dismissed'],
     ],
-
-    /*
-    |--------------------------------------------------------------------------
-    | Allowed Values
-    |--------------------------------------------------------------------------
-    |
-    | Enumerations for validation rules.
-    |
-    */
-
-    'languages' => ['en', 'fr', 'ar'],
-
-    'tones' => ['professional', 'friendly', 'energetic', 'formal', 'concise'],
-
-    'transform_operations' => ['rewrite', 'shorten', 'expand', 'translate'],
-
-    'transform_fields' => ['title', 'description'],
-
-    'feedback_actions' => ['applied_field', 'applied_all', 'regenerated', 'dismissed'],
 
 ];

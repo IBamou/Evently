@@ -29,7 +29,7 @@ class AiGenerationRecorder
             'operation' => $operation,
             'provider' => $provider,
             'model' => $model,
-            'prompt_version' => config('ai.prompt_version'),
+            'prompt_version' => config('ai.event_copilot.prompt_version'),
             'status' => $status,
             'language' => $language,
             'input_hash' => $inputHash,

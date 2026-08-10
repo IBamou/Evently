@@ -15,9 +15,9 @@ beforeEach(function () {
     Cache::flush();
     $this->user = User::factory()->create(['role' => UserRole::Organizer]);
     config([
-        'ai.enabled' => true,
-        'ai.provider' => 'openai',
-        'ai.model' => 'gpt-4o-mini',
+        'ai.event_copilot.enabled' => true,
+        'ai.event_copilot.provider' => 'openai',
+        'ai.event_copilot.model' => 'gpt-4o-mini',
     ]);
 });
 
@@ -172,8 +172,8 @@ it('uses fallback on transient failure', function () {
     });
 
     config([
-        'ai.fallback_provider' => 'groq',
-        'ai.fallback_model' => 'openai/gpt-oss-20b',
+        'ai.event_copilot.fallback_provider' => 'groq',
+        'ai.event_copilot.fallback_model' => 'openai/gpt-oss-20b',
     ]);
 
     $postResponse = $this->actingAs($this->user)->postJson(route('organizer.ai.event-drafts'), [
@@ -239,7 +239,7 @@ it('returns 404 for status of another users generation', function () {
 });
 
 it('returns 403 for status when copilot is disabled', function () {
-    config(['ai.enabled' => false]);
+    config(['ai.event_copilot.enabled' => false]);
 
     $generation = AiGeneration::factory()->create([
         'user_id' => $this->user->id,
@@ -269,7 +269,7 @@ it('returns 401 for unauthenticated status poll', function () {
 });
 
 it('does not dispatch job when copilot is disabled', function () {
-    config(['ai.enabled' => false]);
+    config(['ai.event_copilot.enabled' => false]);
 
     Queue::fake();
 
@@ -323,8 +323,8 @@ it('rethrows transient failures after fallback fails so the queue can retry', fu
     GenerateEventDraftAgent::fake(fn () => throw new ConnectionException('Connection timed out'));
 
     config([
-        'ai.fallback_provider' => 'groq',
-        'ai.fallback_model' => 'openai/gpt-oss-20b',
+        'ai.event_copilot.fallback_provider' => 'groq',
+        'ai.event_copilot.fallback_model' => 'openai/gpt-oss-20b',
     ]);
 
     $generation = AiGeneration::factory()->create([

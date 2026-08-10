@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Queue;
 
 beforeEach(function () {
     $this->user = User::factory()->create(['role' => UserRole::Organizer]);
-    config(['ai.enabled' => true]);
+    config(['ai.event_copilot.enabled' => true]);
 });
 
 it('rejects brief exceeding max length', function () {
@@ -146,7 +146,7 @@ it('accepts draft event_context.description exactly at the configured limit', fu
         'tone' => 'professional',
         'language' => 'en',
         'event_context' => [
-            'description' => str_repeat('a', config('ai.limits.event_context_max')),
+            'description' => str_repeat('a', config('ai.event_copilot.limits.event_context_max')),
         ],
     ]);
 
@@ -160,7 +160,7 @@ it('rejects draft event_context.description above the configured limit', functio
         'tone' => 'professional',
         'language' => 'en',
         'event_context' => [
-            'description' => str_repeat('a', config('ai.limits.event_context_max') + 1),
+            'description' => str_repeat('a', config('ai.event_copilot.limits.event_context_max') + 1),
         ],
     ]);
 

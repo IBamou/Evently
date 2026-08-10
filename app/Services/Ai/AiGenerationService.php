@@ -24,7 +24,7 @@ class AiGenerationService
      */
     public function create(string $operation, array $inputs, User $user): AiGeneration
     {
-        $config = config('ai');
+        $config = config('ai.event_copilot');
 
         $inputHash = hash('sha256', (string) json_encode($inputs));
 
@@ -173,7 +173,7 @@ class AiGenerationService
     {
         $inputs = $this->loadInputs($generation);
 
-        $config = config('ai');
+        $config = config('ai.event_copilot');
 
         return $this->generatorFor($generation->operation)->generate($inputs, $route, $config);
     }

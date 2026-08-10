@@ -25,7 +25,7 @@ class GenerateEventDraftAgent implements Agent, HasStructuredOutput
         array $eventContext,
         array $categories,
     ) {
-        $promptVersion = config('ai.prompt_version');
+        $promptVersion = config('ai.event_copilot.prompt_version');
         [$systemPrompt] = EventCopilotPrompts::generateDraft($categories, $promptVersion);
 
         $this->systemPrompt = $systemPrompt.$this->buildUserContext($brief, $audience, $tone, $language, $eventContext);
