@@ -40,4 +40,14 @@ class BookingPolicy
 
         return $booking->user_id === $user->id;
     }
+
+    /**
+     * Determine whether the user can confirm payment for the booking.
+     *
+     * Only the booking owner can confirm payment.
+     */
+    public function confirm(User $user, Booking $booking): bool
+    {
+        return $booking->user_id === $user->id;
+    }
 }

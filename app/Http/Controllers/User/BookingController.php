@@ -159,8 +159,8 @@ class BookingController extends Controller
         /** @var User $user */
         $user = Auth::user();
 
-        $canCancel = $booking->isCancellable() && $user->id === $booking->user_id;
-        $canPay = $booking->status === BookingStatus::Pending && $booking->user_id === $user->id;
+        $canCancel = $user->can('cancel', $booking) && $booking->isCancellable();
+        $canPay = $user->can('confirm', $booking) && $booking->status === BookingStatus::Pending;
 
         return view('bookings.show', compact('booking', 'canCancel', 'canPay'));
     }
@@ -195,11 +195,7 @@ class BookingController extends Controller
      */
     public function confirmPayment(Booking $booking, BookingService $service): RedirectResponse
     {
-        $this->authorize('view', $booking);
-
-        if ($booking->user_id !== Auth::id()) {
-            abort(403);
-        }
+        $this->authorize('confirm', $booking);
 
         if (! config('payments.mock_confirm')) {
             abort(403, 'Mock payment confirmation is disabled.');

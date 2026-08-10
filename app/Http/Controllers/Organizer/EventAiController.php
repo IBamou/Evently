@@ -45,12 +45,6 @@ class EventAiController extends Controller
      */
     public function status(Request $request, AiGeneration $generation): JsonResponse
     {
-        $user = $request->user();
-
-        if ($user === null) {
-            abort(401);
-        }
-
         $config = config('ai-event-copilot');
 
         if (! $config['enabled']) {
@@ -75,12 +69,6 @@ class EventAiController extends Controller
             return response()->json([
                 'message' => 'Generation not found.',
             ], Response::HTTP_NOT_FOUND);
-        }
-
-        $user = $request->user();
-
-        if ($user === null) {
-            abort(401);
         }
 
         $this->authorize('feedback', $generationModel);

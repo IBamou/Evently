@@ -3,6 +3,7 @@
 namespace App\Actions\Ai;
 
 use App\Jobs\ProcessAiGenerationJob;
+use App\Models\User;
 use App\Services\Ai\AiGenerationService;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\JsonResponse;
@@ -34,11 +35,8 @@ class DispatchGenerationAction
             ], Response::HTTP_FORBIDDEN);
         }
 
+        /** @var User $user */
         $user = $request->user();
-
-        if ($user === null) {
-            abort(401);
-        }
 
         $canRun = $user->canRunAiGeneration();
 
