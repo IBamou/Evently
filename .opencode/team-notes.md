@@ -62,3 +62,7 @@
 - Two copies: WSL = LIVE (source of truth for running), C:\Users\Simplon\Herd\Evently = Windows repo copy. Sync via git (commit+push / pull) instead of manual file copying.
 - Bug audit done 2026-08-09: NewsletterController restored (was deleted unstaged), evently sqlite artifact removed+gitignored, .env deduped, build refreshed, Pint clean. sealed in commit 0ae4250.
 - Month: no AI keys in the app DB; AI copilot uses OPENROUTER key in .env (kept; do not commit .env).
+
+## Progress
+
+- **AiGenerationService refactor (2026-08-10, WSL, big-pickle)**: extracted shared `runAgentFlow(Agent, string, AiProviderRoute, array, callable)` from the three run* methods in `app/Services/Ai/AiGenerationService.php` (400 → 399 lines). Pure boilerplate movement: `prompt()` call + `decodeStructuredResponse()` now live in one place; each run* method keeps its agent construction args and DTO-mapping closure verbatim (incl. category validation, `array_values()` casts, `$data['language'] ?? ($inputs['target_language'] ?? 'en')`). Added `use Laravel\Ai\Contracts\Agent;` (verified `prompt()` on the interface). Nothing else touched — no new files. Verified: `--filter=Ai` 96 passed (327 assertions), full suite **416 passed (1218 assertions)**, Pint clean, PHPStan level 8 clean. NOT committed. Only applied to WSL live copy — Windows repo copy (C:\Users\Simplon\Herd\Evently) still needs the same change via git sync.
