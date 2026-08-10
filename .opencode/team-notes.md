@@ -131,3 +131,42 @@
 - **PHPStan level 8**: clean.
 - **Pint**: clean.
 - Committed `c258f1c` (9 files, +201/−24). NOT pushed — main ahead of origin by 14.
+
+## Hardcoded auth check removal + authorize-first (2026-08-10) — DONE, local only
+- **BookingPolicy::confirm()** added (owner-only check). `BookingController::confirmPayment()` uses `$this->authorize('confirm', $booking)`.
+- **BookingController::show()** view variables use `$user->can('cancel')` and `$user->can('confirm')`.
+- Removed redundant null-user + `abort(401)` guards from EventAiController and DispatchGenerationAction.
+- All `$this->authorize()` calls placed as first line in their methods.
+- Committed `568b7bb`.
+
+## AI usage limiting REMOVED + codebase cleanup (2026-08-10) — DONE, local only
+
+### AI daily usage limiting removed
+- **Deleted** `app/Traits/HasAiGenerationUsage.php` (canRunAiGeneration, aiUsageToday, aiUsageThisMinute).
+- **Stripped** rate-limit methods from `AiGenerationRecorder` (getDailyCount, incrementDailyCount, getMinuteCount, incrementMinuteCount, reserveGenerationSlot). Kept only `record()`, `recordFeedback()`, `getGenerationByPublicId()`.
+- **Removed** `canRunAiGeneration()` guard from `DispatchGenerationAction` — now just creates record, persists inputs, dispatches job.
+- **Removed** `daily_limit` + `per_minute_limit` from `config/ai-event-copilot.php` and `.env.example`/`.env`.
+- **Removed** `ai_rate_limited` and `ai_daily_limit_reached` error messages from `AiGenerationService::errorMessageFor()` and `ai-copilot.blade.php`.
+- **Deleted** `tests/Feature/Ai/RateLimitTest.php` (3 tests). Removed 2 rate-limit tests from `UsageRecordingTest` and 2 from `AsyncGenerationTest`.
+- Removed `HasAiGenerationUsage` from `User` model. Removed unused `AiGenerationRecorder` import from `AsyncGenerationTest`.
+- Committed `75c6a86`.
+
+### Newsletter feature fully removed
+- Deleted controller, model, migration, route, blade section, test. 5 tests removed.
+
+### EnsureAiEnabled middleware
+- New `app/Http/Middleware/EnsureAiEnabled.php` checks `config('ai-event-copilot.enabled')`. Registered as `ai.enabled` in `bootstrap/app.php`. Applied to AI routes group.
+
+### FiltersAndSorts trait extended
+- Added `applyFilters()` method for simple equality + closure-based filter maps.
+- `applySearch()` now accepts closures for relation searches (e.g. `fn ($q, $s) => $q->orWhereHas(...)`).
+- 8 controllers refactored to use traits with closures.
+
+### PHPStan ignoreErrors for generic trait
+- Added `phpstan.neon` ignoreErrors for `missingType.generics` and `argument.type` on `FiltersAndSorts.php` — PHPStan cannot resolve generic Builder|Relation types when a trait is expanded into consuming classes.
+
+### Verification
+- **400 passed** (1166 assertions).
+- **PHPStan level 8**: clean (via ignoreErrors for trait generics).
+- **Pint**: clean.
+- Committed `c0bd5d2`. NOT pushed — main ahead of origin by 16.
