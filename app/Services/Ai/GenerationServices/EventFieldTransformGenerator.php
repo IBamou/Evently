@@ -4,6 +4,8 @@ namespace App\Services\Ai\GenerationServices;
 
 use App\Ai\Agents\TransformEventFieldAgent;
 use App\DTOs\FieldTransformResult;
+use App\Schemas\Contracts\AiSchema;
+use App\Schemas\FieldTransformSchema;
 use Laravel\Ai\Contracts\Agent;
 
 class EventFieldTransformGenerator extends EventGenerator
@@ -26,6 +28,11 @@ class EventFieldTransformGenerator extends EventGenerator
     protected function promptText(): string
     {
         return 'Transform field';
+    }
+
+    protected function schema(): AiSchema
+    {
+        return app(FieldTransformSchema::class);
     }
 
     /**

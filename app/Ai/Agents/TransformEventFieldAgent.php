@@ -2,7 +2,9 @@
 
 namespace App\Ai\Agents;
 
-use App\Ai\Prompts\EventCopilotPrompts;
+use App\Prompts\EventCopilotPrompts;
+use App\Schemas\Contracts\AiSchema;
+use App\Schemas\FieldTransformSchema;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Ai\Contracts\Agent;
 use Laravel\Ai\Contracts\HasStructuredOutput;
@@ -38,11 +40,12 @@ class TransformEventFieldAgent implements Agent, HasStructuredOutput
 
     public function schema(JsonSchema $schema): array
     {
-        return [
-            'content' => $schema->string()->required(),
-            'language' => $schema->string()->required(),
-            'warnings' => $schema->array()->items($schema->string())->required(),
-        ];
+        return $this->aiSchema()->schema($schema);
+    }
+
+    public function aiSchema(): AiSchema
+    {
+        return app(FieldTransformSchema::class);
     }
 
     /**

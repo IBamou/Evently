@@ -6,6 +6,8 @@ use App\Ai\Agents\GenerateEventDraftAgent;
 use App\DTOs\EventDraftResult;
 use App\DTOs\SocialMarketing;
 use App\Models\Category;
+use App\Schemas\Contracts\AiSchema;
+use App\Schemas\EventDraftSchema;
 use Laravel\Ai\Contracts\Agent;
 
 class EventDraftGenerator extends EventGenerator
@@ -38,6 +40,11 @@ class EventDraftGenerator extends EventGenerator
     protected function promptText(): string
     {
         return 'Generate event draft';
+    }
+
+    protected function schema(): AiSchema
+    {
+        return app(EventDraftSchema::class);
     }
 
     /**

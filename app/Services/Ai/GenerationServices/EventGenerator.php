@@ -3,6 +3,7 @@
 namespace App\Services\Ai\GenerationServices;
 
 use App\DTOs\Ai\AiProviderRoute;
+use App\Schemas\Contracts\AiSchema;
 use Laravel\Ai\Contracts\Agent;
 
 abstract class EventGenerator
@@ -21,6 +22,7 @@ abstract class EventGenerator
             $this->promptText(),
             $route,
             $config,
+            $this->schema(),
             fn (array $data): array => $this->mapResult($data, $inputs),
         );
     }
@@ -31,6 +33,8 @@ abstract class EventGenerator
     abstract protected function buildAgent(array $inputs): Agent;
 
     abstract protected function promptText(): string;
+
+    abstract protected function schema(): AiSchema;
 
     /**
      * @param  array<string, mixed>  $data
@@ -46,7 +50,7 @@ abstract class EventGenerator
      * @param  callable(array<string, mixed>): array<string, mixed>  $map
      * @return array<string, mixed>
      */
-    private function runAgentFlow(Agent $agent, string $promptText, AiProviderRoute $route, array $config, callable $map): array
+    private function runAgentFlow(Agent $agent, string $promptText, AiProviderRoute $route, array $config, AiSchema $schema, callable $map): array
     {
         $response = $agent->prompt(
             $promptText,
@@ -55,11 +59,11 @@ abstract class EventGenerator
             timeout: $config['timeout'],
         );
 
-        return $map($this->decodeStructuredResponse($response->text));
+        return $map($this->decodeStructuredResponse($response->text, $schema));
     }
 
     /**
-     * Decode the agent's structured output into an array.
+     * Decode the agent's structured output into an array and validate it.
      *
      * Handles raw JSON and JSON wrapped in markdown code fences (```json),
      * which some providers return despite structured-output instructions.
@@ -69,7 +73,7 @@ abstract class EventGenerator
      *
      * @return array<string, mixed>
      */
-    private function decodeStructuredResponse(?string $text): array
+    private function decodeStructuredResponse(?string $text, AiSchema $schema): array
     {
         if (! is_string($text) || $text === '') {
             throw new \RuntimeException('AI returned an invalid response.');
@@ -88,6 +92,6 @@ abstract class EventGenerator
             throw new \RuntimeException('AI returned an invalid response.');
         }
 
-        return $data;
+        return $schema->validate($data);
     }
 }

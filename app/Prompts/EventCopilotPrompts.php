@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Ai\Prompts;
+namespace App\Prompts;
 
 class EventCopilotPrompts
 {

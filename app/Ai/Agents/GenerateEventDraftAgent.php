@@ -2,7 +2,9 @@
 
 namespace App\Ai\Agents;
 
-use App\Ai\Prompts\EventCopilotPrompts;
+use App\Prompts\EventCopilotPrompts;
+use App\Schemas\Contracts\AiSchema;
+use App\Schemas\EventDraftSchema;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Ai\Contracts\Agent;
 use Laravel\Ai\Contracts\HasStructuredOutput;
@@ -40,17 +42,12 @@ class GenerateEventDraftAgent implements Agent, HasStructuredOutput
 
     public function schema(JsonSchema $schema): array
     {
-        return [
-            'title' => $schema->string()->max(255)->required(),
-            'description' => $schema->string()->required(),
-            'category_id' => $schema->integer()->nullable()->required(),
-            'marketing' => $schema->object(fn (JsonSchema $s) => [
-                'social_post' => $s->string()->max(500)->required(),
-                'email_subject' => $s->string()->max(100)->required(),
-                'email_intro' => $s->string()->max(300)->required(),
-            ])->required(),
-            'missing_information' => $schema->array()->items($schema->string())->required(),
-        ];
+        return $this->aiSchema()->schema($schema);
+    }
+
+    public function aiSchema(): AiSchema
+    {
+        return app(EventDraftSchema::class);
     }
 
     /**
