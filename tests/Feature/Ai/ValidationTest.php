@@ -104,42 +104,6 @@ it('validates transform with valid payload', function () {
         ->assertJsonValidationErrors('content');
 });
 
-it('rejects marketing without event_context', function () {
-    $response = $this->actingAs($this->user)->postJson(route('organizer.ai.event-marketing'), [
-        'language' => 'en',
-        'tone' => 'professional',
-    ]);
-
-    $response->assertStatus(422)
-        ->assertJsonValidationErrors('event_context');
-});
-
-it('rejects marketing without title in event_context', function () {
-    $response = $this->actingAs($this->user)->postJson(route('organizer.ai.event-marketing'), [
-        'language' => 'en',
-        'tone' => 'professional',
-        'event_context' => [
-            'description' => 'A music concert',
-        ],
-    ]);
-
-    $response->assertStatus(422)
-        ->assertJsonValidationErrors('event_context.title');
-});
-
-it('validates marketing with valid payload', function () {
-    $response = $this->actingAs($this->user)->postJson(route('organizer.ai.event-marketing'), [
-        'language' => 'en',
-        'tone' => 'professional',
-        'event_context' => [
-            'title' => 'Music Festival',
-        ],
-    ]);
-
-    // Feature is disabled → 403, not 422
-    $response->assertStatus(403);
-});
-
 it('rejects feedback with invalid action', function () {
     $response = $this->actingAs($this->user)->postJson(
         route('organizer.ai.generations.feedback', ['generation' => 'nonexistent']),
@@ -190,33 +154,6 @@ it('rejects draft event_context.description above the configured limit', functio
         'tone' => 'professional',
         'language' => 'en',
         'event_context' => [
-            'description' => str_repeat('a', config('ai-event-copilot.limits.event_context_max') + 1),
-        ],
-    ]);
-
-    $response->assertStatus(422)
-        ->assertJsonValidationErrors('event_context.description');
-});
-
-it('accepts marketing event_context.description exactly at the configured limit', function () {
-    $response = $this->actingAs($this->user)->postJson(route('organizer.ai.event-marketing'), [
-        'language' => 'en',
-        'tone' => 'professional',
-        'event_context' => [
-            'title' => 'Music Festival',
-            'description' => str_repeat('a', config('ai-event-copilot.limits.event_context_max')),
-        ],
-    ]);
-
-    $response->assertStatus(403);
-});
-
-it('rejects marketing event_context.description above the configured limit', function () {
-    $response = $this->actingAs($this->user)->postJson(route('organizer.ai.event-marketing'), [
-        'language' => 'en',
-        'tone' => 'professional',
-        'event_context' => [
-            'title' => 'Music Festival',
             'description' => str_repeat('a', config('ai-event-copilot.limits.event_context_max') + 1),
         ],
     ]);

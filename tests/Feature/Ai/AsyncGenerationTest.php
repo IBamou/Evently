@@ -60,24 +60,6 @@ it('dispatches job for transform field endpoint', function () {
     Queue::assertPushed(ProcessAiGenerationJob::class);
 });
 
-it('dispatches job for marketing endpoint', function () {
-    Queue::fake();
-
-    $response = $this->actingAs($this->user)->postJson(route('organizer.ai.event-marketing'), [
-        'language' => 'en',
-        'tone' => 'professional',
-        'event_context' => [
-            'title' => 'Music Festival',
-            'description' => 'A music festival',
-        ],
-    ]);
-
-    $response->assertStatus(202)
-        ->assertJsonPath('data.status', 'processing');
-
-    Queue::assertPushed(ProcessAiGenerationJob::class);
-});
-
 it('returns processing status immediately via polling', function () {
     // Without agent fake, the job would fail. But we just want to test the POST response.
     Queue::fake();

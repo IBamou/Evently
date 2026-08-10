@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Organizer;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Organizer\Ai\GenerateEventDraftRequest;
-use App\Http\Requests\Organizer\Ai\GenerateEventMarketingRequest;
 use App\Http\Requests\Organizer\Ai\GenerationFeedbackRequest;
 use App\Http\Requests\Organizer\Ai\TransformEventFieldRequest;
 use App\Jobs\ProcessAiGenerationJob;
@@ -37,15 +36,6 @@ class EventAiController extends Controller
         return $this->dispatchGeneration(
             $request,
             'transform_field',
-            fn (FormRequest $r) => $r->validated(),
-        );
-    }
-
-    public function generateMarketing(GenerateEventMarketingRequest $request): JsonResponse
-    {
-        return $this->dispatchGeneration(
-            $request,
-            'generate_marketing',
             fn (FormRequest $r) => $r->validated(),
         );
     }

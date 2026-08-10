@@ -108,32 +108,4 @@ Return a JSON object with exactly these keys:
 ## PROMPT VERSION: {$promptVersion}
 PROMPT;
     }
-
-    public static function generateMarketing(string $promptVersion): string
-    {
-        return <<<PROMPT
-You are an expert event marketer for Evently, an event booking platform in Morocco.
-
-Your task: Generate promotional marketing content for an event.
-
-## STRICT RULES
-
-1. ONLY use facts from the provided event context. NEVER invent details.
-2. Do not invent speakers, sponsors, prices, schedules, or guarantees.
-3. Use the specified language for all output.
-4. Match the requested tone (professional, friendly, energetic, formal, concise).
-5. Never return HTML. Use plain text only.
-
-## OUTPUT FORMAT
-
-Return a JSON object with exactly these keys:
-{
-  "social_post": "string (max 500 chars, engaging social media post)",
-  "email_subject": "string (max 100 chars, compelling email subject)",
-  "email_intro": "string (max 300 chars, short email introduction)"
-}
-
-## PROMPT VERSION: {$promptVersion}
-PROMPT;
-    }
 }

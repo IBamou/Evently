@@ -1,5 +1,5 @@
 {{-- ═══════════════════════════════════════════════════════════════════════
-    AI Event Copilot — Start screen → AI workspace (tabs: Draft | Polish | Marketing).
+    AI Event Copilot — Start screen → AI workspace (tabs: Draft | Polish).
 
     Include inside `@if(config('ai-event-copilot.enabled'))` on the organizer
     event create/edit pages (create.blade.php / edit.blade.php). Self-contained:
@@ -8,7 +8,6 @@
     Backend contract (routes/organizer/ai/* — ASYNC, queue-backed):
       POST ai/event-drafts            → 202 { data: { generation_id, status: 'processing' } }
       POST ai/event-fields/transform  → 202 { data: { generation_id, status: 'processing' } }
-      POST ai/event-marketing         → 202 { data: { generation_id, status: 'processing' } }
       GET  ai/generations/{public_id} → 200 { data: { generation_id, status
            ('processing'|'success'|'error'|'blocked'), result|null, error_code,
            error_message, operation, provider_used, model_used, latency_ms } }
@@ -16,7 +15,6 @@
              draft:      { title, description, category{id,name,slug}|null,
                            marketing{social_post,email_subject,email_intro}, missing_information[] }
              transform:  { content, language, warnings[] }
-             marketing:  { social_post, email_subject, email_intro }
       POST ai/generations/{id}/feedback → { action: applied_field|applied_all|regenerated|dismissed, field? }
     Errors: { message, error_code } with 403/429/422 — mapped in mapError().
     ═══════════════════════════════════════════════════════════════════════ --}}
@@ -24,7 +22,6 @@
     $aiRoutes = [
         'draft' => route('organizer.ai.event-drafts'),
         'transform' => route('organizer.ai.event-fields.transform'),
-        'marketing' => route('organizer.ai.event-marketing'),
         'status' => route('organizer.ai.generations.status', ['generation' => '__GEN__']),
         'feedback' => route('organizer.ai.generations.feedback', ['generation' => '__GEN__']),
     ];
@@ -88,7 +85,7 @@ window.aixCopilotState = function () {
     // ── boot / state ──
     "open": false,
     "screen": "start",          // 'start' | 'session'
-    "tab": "draft",             // 'draft' | 'polish' | 'marketing'
+    "tab": "draft",             // 'draft' | 'polish'
     "routes": window.AIX_ROUTES || {},
     "_storageKey": "aix_copilot_session_v1",
     "_toastTimer": null,
@@ -115,16 +112,10 @@ window.aixCopilotState = function () {
     "toneMenuOpen": false,
     "translateMenuOpen": false,
 
-    // ── marketing ──
-    "marketingType": "social",  // 'social' | 'email'
-    "marketingData": null,      // { social_post, email_subject, email_intro } when draft is absent
-    "marketingBusy": false,
-    "marketingError": "",
-
     // ── toast ──
     "toastMsg": "",
     "toastVisible": false,
-    "genState": "idle",         // 'idle' | 'generating' | 'transforming' | 'marketing'
+    "genState": "idle",         // 'idle' | 'generating' | 'transforming'
 
     // ── lifecycle ──
     init() {
@@ -136,7 +127,6 @@ window.aixCopilotState = function () {
     backdropVis() { return this.open ? '' : 'display:none'; },
     spinVis(cond) { return cond ? 'animation:spin 1s linear infinite' : 'display:none'; },
     errVis() { return this.draftError ? '' : 'display:none'; },
-    marketingErrVis() { return this.marketingError ? '' : 'display:none'; },
     toastVis() { return this.toastVisible ? '' : 'display:none'; },
     draftLangDir() {
         if (this.draft && this.draft.language) return this.draft.language === 'ar' ? 'rtl' : 'ltr';
@@ -157,11 +147,9 @@ window.aixCopilotState = function () {
     titleContent() { return (this.formValue('title') || '').trim(); },
     descContent() { return (this.formValue('description') || '').trim(); },
     canPolish() { return this.formTick >= 0 && !!(this.titleContent() || this.descContent()); },
-    canMarket() { return this.formTick >= 0 && !!(this.titleContent() || (this.draft && this.draft.suggestions && this.draft.suggestions.title)); },
     tabVisible(t) {
         if (t === 'draft') return true;
         if (t === 'polish') return this.canPolish();
-        if (t === 'marketing') return this.canMarket();
         return false;
     },
     eventContext(keys) {
@@ -181,11 +169,6 @@ window.aixCopilotState = function () {
     suggestion(key) { return this.draft && this.draft.suggestions ? (this.draft.suggestions[key] || '') : ''; },
     suggestionsCategory() { return this.draft && this.draft.suggestions && this.draft.suggestions.category ? this.draft.suggestions.category : null; },
     categoryLabel() { var c = this.suggestionsCategory(); return c ? c.name : ''; },
-    marketing() {
-        if (this.draft && this.draft.suggestions && this.draft.suggestions.marketing) return this.draft.suggestions.marketing;
-        return this.marketingData;
-    },
-    marketingKey(key) { var m = this.marketing(); return m ? (m[key] || '') : ''; },
     missingList() {
         if (!this.draft || !this.draft.missing_information || !this.draft.missing_information.length) return '';
         return this.draft.missing_information.map(function (m, i) { return (i + 1) + '. ' + m; }).join('\n');
@@ -205,8 +188,6 @@ window.aixCopilotState = function () {
                 draft: this.draft,
                 applied: this.applied,
                 undo: this.undoSnapshot,
-                marketingType: this.marketingType,
-                marketingData: this.marketingData,
             }));
         } catch (e) { /* storage full / unavailable — ignore */ }
     },
@@ -226,8 +207,6 @@ window.aixCopilotState = function () {
             this.draft = s.draft;
             this.applied = !!s.applied;
             this.undoSnapshot = s.undo || null;
-            this.marketingType = s.marketingType === 'email' ? 'email' : 'social';
-            this.marketingData = s.marketingData || null;
             if (this.screen === 'session' && !this.tabVisible(this.tab)) this.tab = 'draft';
             // A page reload wipes the native form; re-apply an already-applied draft so the
             // workspace state matches the form again.
@@ -338,10 +317,6 @@ window.aixCopilotState = function () {
         try { document.execCommand('copy'); done(); } catch (e) { /* ignore */ }
         document.body.removeChild(ta);
     },
-    copyMarketing(key) {
-        var label = key === 'social_post' ? 'Social post' : (key === 'email_subject' ? 'Email subject' : 'Email intro');
-        this.copyText(this.marketingKey(key), label);
-    },
 
     // ── feedback (fire-and-forget) ──
     sendFeedback(generationId, action, field) {
@@ -373,7 +348,6 @@ window.aixCopilotState = function () {
         this.applied = false;
         this.undoSnapshot = null;
         this.draftError = '';
-        this.marketingData = null;
         this.tab = 'draft';
         this.persistSession();
         this.toast('Creating a new draft');
@@ -428,7 +402,6 @@ window.aixCopilotState = function () {
                 title: result.title || '',
                 description: result.description || '',
                 category: result.category || null,
-                marketing: result.marketing || {},
             },
             missing_information: result.missing_information || [],
         };
@@ -493,42 +466,6 @@ window.aixCopilotState = function () {
         this.formTick++;
         this.persistSession();
         this.toast('Reverted to your previous values');
-    },
-
-    // ── marketing ──
-    setMarketingType(t) { this.marketingType = t; this.persistSession(); },
-    async regenerateMarketing() {
-        this.marketingBusy = true;
-        this.genState = 'marketing';
-        this.marketingError = '';
-        try {
-            var ctx = this.eventContext(['title', 'description', 'city', 'location', 'starts_at']);
-            if (!ctx.title) {
-                this.marketingError = 'Add an event title first — the marketing copy needs it.';
-                return;
-            }
-            var out = await this.post(this.routes.marketing, { language: this.language, tone: this.tone, event_context: ctx });
-            if (!out.res.ok) {
-                this.marketingError = this.mapError(out.body, out.res.status);
-                return;
-            }
-            var genId = out.body && out.body.data ? out.body.data.generation_id : null;
-            if (!genId) { this.marketingError = 'The AI assistant did not respond. Please try again.'; return; }
-            await this.pollGeneration(genId, (result) => {
-                if (result && result.social_post !== undefined) {
-                    if (this.draft) this.draft.suggestions.marketing = result;
-                    else this.marketingData = result;
-                }
-                this.persistSession();
-            }, (err) => {
-                this.marketingError = err;
-            });
-        } catch (e) {
-            this.marketingError = this.mapError(null, 0);
-        } finally {
-            this.marketingBusy = false;
-            this.genState = 'idle';
-        }
     },
 
     // ── polish (field-oriented, always on current form value) ──
@@ -697,7 +634,6 @@ window.aixCopilotState = function () {
                 <div class="aix-tabbar" role="tablist" aria-label="Copilot tools">
                     <button type="button" role="tab" class="aix-tab" x-bind:class="tab === 'draft' ? 'aix-tab-active' : ''" x-on:click="setTab('draft')">Draft</button>
                     <button type="button" role="tab" class="aix-tab" x-show="canPolish()" x-bind:class="tab === 'polish' ? 'aix-tab-active' : ''" x-on:click="setTab('polish')">Polish</button>
-                    <button type="button" role="tab" class="aix-tab" x-show="canMarket()" x-bind:class="tab === 'marketing' ? 'aix-tab-active' : ''" x-on:click="setTab('marketing')">Marketing</button>
                 </div>
                 {{-- Applied confirmation (contextual, replaces permanent Undo All) --}}
                 <div x-cloak x-show="applied" class="aix-applied">
@@ -871,58 +807,7 @@ window.aixCopilotState = function () {
                 </div>
             </div>
 
-            {{-- ────────── TAB: MARKETING ────────── --}}
-            <div x-show="tab === 'marketing'" class="aix-panel" style="gap:14px">
-
-                <div>
-                    <div style="font-size:15px;font-weight:800;color:var(--text)">Marketing copy</div>
-                    <div class="aix-hint" style="margin-top:2px">Created from your event draft.</div>
-                </div>
-
-                {{-- Content type --}}
-                <div class="aix-seg" role="tablist" aria-label="Marketing content type">
-                    <button type="button" class="aix-seg-btn" x-bind:class="marketingType === 'social' ? 'aix-seg-active' : ''" x-on:click="setMarketingType('social')">Social</button>
-                    <button type="button" class="aix-seg-btn" x-bind:class="marketingType === 'email' ? 'aix-seg-active' : ''" x-on:click="setMarketingType('email')">Email</button>
-                </div>
-
-                <div x-cloak x-bind:style="marketingErrVis()" class="aix-errbox" x-text="marketingError" role="alert"></div>
-
-                {{-- Social --}}
-                <div x-show="marketingType === 'social'">
-                    <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
-                        <span class="aix-label">Social post</span>
-                        <div style="flex:1"></div>
-                        <button type="button" class="aix-btn aix-btn-sm" x-on:click="copyMarketing('social_post')">Copy</button>
-                    </div>
-                    <div class="aix-prev" x-bind:dir="draftLangDir()" x-text="marketingKey('social_post') || (marketingBusy ? 'Generating…' : 'No social post yet.')"></div>
-                </div>
-
-                {{-- Email --}}
-                <div x-show="marketingType === 'email'" class="aix-flexcol" style="gap:12px">
-                    <div>
-                        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
-                            <span class="aix-label">Email subject</span>
-                            <div style="flex:1"></div>
-                            <button type="button" class="aix-btn aix-btn-sm" x-on:click="copyMarketing('email_subject')">Copy</button>
-                        </div>
-                        <div class="aix-prev" style="max-height:100px;font-weight:700" x-bind:dir="draftLangDir()" x-text="marketingKey('email_subject') || 'No subject yet.'"></div>
-                    </div>
-                    <div>
-                        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
-                            <span class="aix-label">Email intro</span>
-                            <div style="flex:1"></div>
-                            <button type="button" class="aix-btn aix-btn-sm" x-on:click="copyMarketing('email_intro')">Copy</button>
-                        </div>
-                        <div class="aix-prev" style="max-height:150px" x-bind:dir="draftLangDir()" x-text="marketingKey('email_intro') || 'No intro yet.'"></div>
-                    </div>
-                </div>
-
-                <button type="button" class="aix-btn" style="width:100%;justify-content:center" x-on:click="regenerateMarketing()" x-bind:disabled="marketingBusy">
-                    <svg x-bind:style="spinVis(marketingBusy)" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
-                    <span x-text="marketingBusy ? 'Generating…' : '↻ Regenerate'">↻ Regenerate</span>
-                </button>
             </div>
-        </div>
         </template>
 
         {{-- Toast --}}

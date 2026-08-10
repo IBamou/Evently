@@ -9,7 +9,6 @@ use App\Models\User;
 use App\Services\Ai\GenerationServices\EventDraftGenerator;
 use App\Services\Ai\GenerationServices\EventFieldTransformGenerator;
 use App\Services\Ai\GenerationServices\EventGenerator;
-use App\Services\Ai\GenerationServices\EventMarketingGenerator;
 use Illuminate\Support\Facades\Log;
 use Throwable;
 
@@ -193,7 +192,6 @@ class AiGenerationService
     {
         return match ($operation) {
             'generate_draft' => new EventDraftGenerator,
-            'generate_marketing' => new EventMarketingGenerator,
             default => new EventFieldTransformGenerator,
         };
     }

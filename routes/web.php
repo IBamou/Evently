@@ -84,7 +84,6 @@ Route::middleware(['auth', 'role:organizer'])->prefix('organizer')->name('organi
     Route::prefix('ai')->name('ai.')->group(function () {
         Route::post('event-drafts', [EventAiController::class, 'generateDraft'])->name('event-drafts');
         Route::post('event-fields/transform', [EventAiController::class, 'transformField'])->name('event-fields.transform');
-        Route::post('event-marketing', [EventAiController::class, 'generateMarketing'])->name('event-marketing');
         Route::get('generations/{generation:public_id}', [EventAiController::class, 'status'])->name('generations.status');
         Route::post('generations/{generation}/feedback', [EventAiController::class, 'recordFeedback'])->name('generations.feedback');
     });

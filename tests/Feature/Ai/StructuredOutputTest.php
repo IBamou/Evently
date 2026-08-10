@@ -1,7 +1,6 @@
 <?php
 
 use App\Ai\Agents\GenerateEventDraftAgent;
-use App\Ai\Agents\GenerateEventMarketingAgent;
 use App\Ai\Agents\TransformEventFieldAgent;
 use App\Enums\UserRole;
 use App\Models\Category;
@@ -144,48 +143,6 @@ it('nulls invalid category_id from AI response via polling', function () {
     $statusResponse->assertOk()
         ->assertJsonPath('data.status', 'success')
         ->assertJsonPath('data.result.category', null);
-});
-
-it('returns valid marketing output via polling', function () {
-    GenerateEventMarketingAgent::fake([
-        [
-            'social_post' => 'Come join us for a fantastic event!',
-            'email_subject' => 'You are invited!',
-            'email_intro' => 'We are excited to host this amazing event.',
-        ],
-    ]);
-
-    $response = $this->actingAs($this->user)->postJson(route('organizer.ai.event-marketing'), [
-        'language' => 'en',
-        'tone' => 'professional',
-        'event_context' => [
-            'title' => 'Music Festival',
-            'description' => 'A music festival',
-        ],
-    ]);
-
-    $response->assertStatus(202)
-        ->assertJsonPath('data.status', 'processing');
-
-    $generationId = $response->json('data.generation_id');
-
-    $statusResponse = $this->actingAs($this->user)->getJson(
-        route('organizer.ai.generations.status', ['generation' => $generationId]),
-    );
-
-    $statusResponse->assertOk()
-        ->assertJsonPath('data.status', 'success')
-        ->assertJsonStructure([
-            'data' => [
-                'generation_id',
-                'status',
-                'result' => [
-                    'social_post',
-                    'email_subject',
-                    'email_intro',
-                ],
-            ],
-        ]);
 });
 
 it('returns valid transform output via polling', function () {
