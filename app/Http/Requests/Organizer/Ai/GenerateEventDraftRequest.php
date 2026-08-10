@@ -14,7 +14,7 @@ class GenerateEventDraftRequest extends FormRequest
     /** @return array> */
     public function rules(): array
     {
-        $config = config('ai-event-copilot');
+        $config = config('ai');
 
         return [
             'brief' => ['required', 'string', 'max:'.$config['limits']['brief_max']],

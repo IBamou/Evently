@@ -1,7 +1,7 @@
 {{-- ═══════════════════════════════════════════════════════════════════════
     AI Event Copilot — Start screen → AI workspace (tabs: Draft | Polish).
 
-    Include inside `@if(config('ai-event-copilot.enabled'))` on the organizer
+    Include inside `@if(config('ai.enabled'))` on the organizer
     event create/edit pages (create.blade.php / edit.blade.php). Self-contained:
     renders its own trigger button, the right-side drawer and all Alpine state.
 
@@ -601,7 +601,7 @@ window.aixCopilotState = function () {
                     <label style="display:flex;flex-direction:column;gap:6px">
                         <span class="aix-label">Tone</span>
                         <select class="aix-input" x-model="tone" x-ref="aixTone">
-                            @foreach(config('ai-event-copilot.tones') as $tone)
+                            @foreach(config('ai.tones') as $tone)
                                 <option value="{{ $tone }}" @selected($tone === 'friendly')>{{ \Illuminate\Support\Str::headline($tone) }}</option>
                             @endforeach
                         </select>
@@ -609,7 +609,7 @@ window.aixCopilotState = function () {
                     <label style="display:flex;flex-direction:column;gap:6px">
                         <span class="aix-label">Language</span>
                         <select class="aix-input" x-model="language" x-ref="aixLang">
-                            @foreach(config('ai-event-copilot.languages') as $lang)
+                            @foreach(config('ai.languages') as $lang)
                                 <option value="{{ $lang }}" @selected($lang === 'en')>{{ ['en' => 'English', 'fr' => 'Français', 'ar' => 'العربية'][$lang] ?? $lang }}</option>
                             @endforeach
                         </select>

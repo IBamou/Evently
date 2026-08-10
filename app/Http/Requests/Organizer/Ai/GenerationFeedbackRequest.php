@@ -14,7 +14,7 @@ class GenerationFeedbackRequest extends FormRequest
     /** @return array> */
     public function rules(): array
     {
-        $config = config('ai-event-copilot');
+        $config = config('ai');
 
         return [
             'action' => ['required', 'string', 'in:'.implode(',', $config['feedback_actions'])],

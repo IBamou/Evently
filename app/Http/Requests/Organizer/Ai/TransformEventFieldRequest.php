@@ -14,7 +14,7 @@ class TransformEventFieldRequest extends FormRequest
     /** @return array> */
     public function rules(): array
     {
-        $config = config('ai-event-copilot');
+        $config = config('ai');
 
         return [
             'field' => ['required', 'string', 'in:'.implode(',', $config['transform_fields'])],

@@ -25,7 +25,7 @@ class TransformEventFieldAgent implements Agent, HasStructuredOutput
         ?string $targetLanguage,
         array $eventContext,
     ) {
-        $promptVersion = config('ai-event-copilot.prompt_version');
+        $promptVersion = config('ai.prompt_version');
         $this->systemPrompt = EventCopilotPrompts::transformField($promptVersion)
             .$this->buildUserContext($field, $operation, $content, $tone, $targetLanguage, $eventContext);
     }

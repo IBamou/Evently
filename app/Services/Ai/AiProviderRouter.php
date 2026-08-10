@@ -18,7 +18,7 @@ class AiProviderRouter
      */
     public function resolvePrimary(): AiProviderRoute
     {
-        $config = config('ai-event-copilot');
+        $config = config('ai');
 
         return new AiProviderRoute(
             provider: $config['provider'],
@@ -31,7 +31,7 @@ class AiProviderRouter
      */
     public function resolveFallback(): ?AiProviderRoute
     {
-        $config = config('ai-event-copilot');
+        $config = config('ai');
 
         $fallbackProvider = $config['fallback_provider'] ?? null;
         $fallbackModel = $config['fallback_model'] ?? null;

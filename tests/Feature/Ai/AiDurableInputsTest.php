@@ -14,9 +14,9 @@ beforeEach(function () {
     Cache::flush();
     $this->user = User::factory()->create(['role' => UserRole::Organizer]);
     config([
-        'ai-event-copilot.enabled' => true,
-        'ai-event-copilot.provider' => 'openai',
-        'ai-event-copilot.model' => 'gpt-4o-mini',
+        'ai.enabled' => true,
+        'ai.provider' => 'openai',
+        'ai.model' => 'gpt-4o-mini',
     ]);
 });
 

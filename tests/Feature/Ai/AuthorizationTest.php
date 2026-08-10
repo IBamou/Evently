@@ -33,7 +33,7 @@ it('returns 403 for regular user', function () {
 
 it('allows organizer to access AI endpoints', function () {
     $user = User::factory()->create(['role' => UserRole::Organizer]);
-    config(['ai-event-copilot.enabled' => true]);
+    config(['ai.enabled' => true]);
 
     GenerateEventDraftAgent::fake([
         [
@@ -67,7 +67,7 @@ it('allows organizer to access AI endpoints', function () {
 
 it('returns 403 ai_feature_disabled when copilot is disabled', function () {
     $user = User::factory()->create(['role' => UserRole::Organizer]);
-    config(['ai-event-copilot.enabled' => false]);
+    config(['ai.enabled' => false]);
 
     $response = $this->actingAs($user)->postJson(route('organizer.ai.event-drafts'), [
         'brief' => 'A music concert',
