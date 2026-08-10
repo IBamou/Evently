@@ -2,20 +2,15 @@
 
 namespace App\Services\Ai;
 
-use App\Ai\Agents\GenerateEventDraftAgent;
-use App\Ai\Agents\GenerateEventMarketingAgent;
-use App\Ai\Agents\TransformEventFieldAgent;
 use App\DTOs\Ai\AiProviderRoute;
-use App\DTOs\EventDraftResult;
-use App\DTOs\FieldTransformResult;
-use App\DTOs\MarketingResult;
-use App\DTOs\SocialMarketing;
 use App\Enums\AiGenerationStatus;
 use App\Models\AiGeneration;
-use App\Models\Category;
 use App\Models\User;
+use App\Services\Ai\GenerationServices\EventDraftGenerator;
+use App\Services\Ai\GenerationServices\EventFieldTransformGenerator;
+use App\Services\Ai\GenerationServices\EventGenerator;
+use App\Services\Ai\GenerationServices\EventMarketingGenerator;
 use Illuminate\Support\Facades\Log;
-use Laravel\Ai\Contracts\Agent;
 use Throwable;
 
 class AiGenerationService
@@ -177,7 +172,7 @@ class AiGenerationService
     }
 
     /**
-     * Run the appropriate agent for the given generation.
+     * Run the appropriate generation service for the given operation.
      *
      * @return array<string, mixed>
      */
@@ -188,128 +183,19 @@ class AiGenerationService
         /** @var array<string, mixed> $config */
         $config = config('ai-event-copilot');
 
-        return match ($generation->operation) {
-            'generate_draft' => $this->runDraftAgent($inputs, $route, $config),
-            'generate_marketing' => $this->runMarketingAgent($inputs, $route, $config),
-            default => $this->runTransformAgent($inputs, $route, $config),
+        return $this->generatorFor($generation->operation)->generate($inputs, $route, $config);
+    }
+
+    /**
+     * Resolve the isolated generation service responsible for an operation.
+     */
+    private function generatorFor(string $operation): EventGenerator
+    {
+        return match ($operation) {
+            'generate_draft' => new EventDraftGenerator,
+            'generate_marketing' => new EventMarketingGenerator,
+            default => new EventFieldTransformGenerator,
         };
-    }
-
-    /**
-     * Run an agent and decode its structured output.
-     *
-     * @param  array<string, mixed>  $config
-     * @param  callable(array<string, mixed>): array<string, mixed>  $map
-     * @return array<string, mixed>
-     */
-    private function runAgentFlow(Agent $agent, string $promptText, AiProviderRoute $route, array $config, callable $map): array
-    {
-        $response = $agent->prompt(
-            $promptText,
-            provider: $route->provider,
-            model: $route->model,
-            timeout: $config['timeout'],
-        );
-
-        return $map($this->decodeStructuredResponse($response->text));
-    }
-
-    /**
-     * @param  array<string, mixed>  $inputs
-     * @param  array<string, mixed>  $config
-     * @return array<string, mixed>
-     */
-    private function runDraftAgent(array $inputs, AiProviderRoute $route, array $config): array
-    {
-        $categories = array_values(Category::select('id', 'name', 'slug')->get()->toArray());
-
-        $agent = new GenerateEventDraftAgent(
-            brief: $inputs['brief'],
-            audience: $inputs['audience'] ?? null,
-            tone: $inputs['tone'],
-            language: $inputs['language'],
-            eventContext: $inputs['event_context'] ?? [],
-            categories: $categories,
-        );
-
-        return $this->runAgentFlow($agent, 'Generate event draft', $route, $config, function (array $data) use ($categories): array {
-            $categoryId = $data['category_id'] ?? null;
-            $category = null;
-            if ($categoryId !== null) {
-                $category = collect($categories)->firstWhere('id', $categoryId);
-                if ($category === null) {
-                    $categoryId = null;
-                }
-            }
-
-            /** @var array<string, mixed> $marketing */
-            $marketing = $data['marketing'] ?? [];
-
-            $result = new EventDraftResult(
-                title: $data['title'] ?? '',
-                description: $data['description'] ?? '',
-                category: $category ? ['id' => $category['id'], 'name' => $category['name'], 'slug' => $category['slug']] : null,
-                marketing: new SocialMarketing(
-                    socialPost: $marketing['social_post'] ?? '',
-                    emailSubject: $marketing['email_subject'] ?? '',
-                    emailIntro: $marketing['email_intro'] ?? '',
-                ),
-                missingInformation: array_values($data['missing_information'] ?? []),
-            );
-
-            return $result->toArray();
-        });
-    }
-
-    /**
-     * @param  array<string, mixed>  $inputs
-     * @param  array<string, mixed>  $config
-     * @return array<string, mixed>
-     */
-    private function runMarketingAgent(array $inputs, AiProviderRoute $route, array $config): array
-    {
-        $agent = new GenerateEventMarketingAgent(
-            language: $inputs['language'],
-            tone: $inputs['tone'],
-            eventContext: $inputs['event_context'] ?? [],
-        );
-
-        return $this->runAgentFlow($agent, 'Generate marketing content', $route, $config, function (array $data): array {
-            $result = new MarketingResult(
-                socialPost: $data['social_post'] ?? '',
-                emailSubject: $data['email_subject'] ?? '',
-                emailIntro: $data['email_intro'] ?? '',
-            );
-
-            return $result->toArray();
-        });
-    }
-
-    /**
-     * @param  array<string, mixed>  $inputs
-     * @param  array<string, mixed>  $config
-     * @return array<string, mixed>
-     */
-    private function runTransformAgent(array $inputs, AiProviderRoute $route, array $config): array
-    {
-        $agent = new TransformEventFieldAgent(
-            field: $inputs['field'],
-            operation: $inputs['operation'],
-            content: $inputs['content'],
-            tone: $inputs['tone'] ?? null,
-            targetLanguage: $inputs['target_language'] ?? null,
-            eventContext: $inputs['event_context'] ?? [],
-        );
-
-        return $this->runAgentFlow($agent, 'Transform field', $route, $config, function (array $data) use ($inputs): array {
-            $result = new FieldTransformResult(
-                content: $data['content'] ?? '',
-                language: $data['language'] ?? ($inputs['target_language'] ?? 'en'),
-                warnings: array_values($data['warnings'] ?? []),
-            );
-
-            return $result->toArray();
-        });
     }
 
     /**
@@ -355,30 +241,6 @@ class AiGenerationService
     public function storeInputs(AiGeneration $generation, array $inputs): void
     {
         $generation->update(['input_payload' => $inputs]);
-    }
-
-    /**
-     * Decode the agent's structured output into an array.
-     *
-     * A null or non-JSON payload is treated as an invalid structured output:
-     * a permanent (non-retryable) failure so the generation ends in ERROR
-     * instead of silently persisting an empty result.
-     *
-     * @return array<string, mixed>
-     */
-    private function decodeStructuredResponse(?string $text): array
-    {
-        if (! is_string($text) || $text === '') {
-            throw new \RuntimeException('AI returned an invalid response.');
-        }
-
-        $data = json_decode($text, true);
-
-        if (! is_array($data)) {
-            throw new \RuntimeException('AI returned an invalid response.');
-        }
-
-        return $data;
     }
 
     /**
