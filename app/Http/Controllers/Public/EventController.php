@@ -9,6 +9,7 @@ use App\Models\Event;
 use App\Models\Ticket;
 use App\Traits\FiltersAndSorts;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\View\View;
 
 class EventController extends Controller
@@ -65,34 +66,41 @@ class EventController extends Controller
 
         // Categories with published-event counts (for the sidebar filter)
         // Hide categories that have zero published events (faker junk)
-        $categories = Category::withCount(['events as published_count' => function ($q): void {
-            $q->where('status', EventStatus::Published)->whereNull('deleted_at');
-        }])->orderBy('name')->get()
-            ->filter(fn ($cat) => $cat->published_count > 0)
-            ->values();
+        // Cached 5 min — they change rarely and run on every home load.
+        $categories = Cache::remember('home.categories', 300, function () {
+            return Category::withCount(['events as published_count' => function ($q): void {
+                $q->where('status', EventStatus::Published)->whereNull('deleted_at');
+            }])->orderBy('name')->get()
+                ->filter(fn ($cat) => $cat->published_count > 0)
+                ->values();
+        });
 
-        // Distinct city values of published events
-        $cities = Event::where('status', EventStatus::Published)
-            ->whereNull('deleted_at')
-            ->distinct()
-            ->pluck('city')
-            ->sort()
-            ->values();
+        // Distinct city values of published events (cached 5 min, same reason).
+        $cities = Cache::remember('home.cities', 300, function () {
+            return Event::where('status', EventStatus::Published)
+                ->whereNull('deleted_at')
+                ->distinct()
+                ->pluck('city')
+                ->sort()
+                ->values();
+        });
 
-        // Real hero stats — computed from database
-        $upcomingCount = Event::where('status', EventStatus::Published)
-            ->whereNull('deleted_at')
-            ->where('starts_at', '>', now())
-            ->count();
+        // Real hero stats — computed from database (cached 5 min).
+        $heroStats = Cache::remember('home.heroStats', 300, function (): array {
+            $upcomingCount = Event::where('status', EventStatus::Published)
+                ->whereNull('deleted_at')
+                ->where('starts_at', '>', now())
+                ->count();
 
-        $ticketsSold = Ticket::whereHas('event', function ($q): void {
-            $q->where('status', EventStatus::Published)->whereNull('deleted_at');
-        })->count();
+            $ticketsSold = Ticket::whereHas('event', function ($q): void {
+                $q->where('status', EventStatus::Published)->whereNull('deleted_at');
+            })->count();
 
-        $heroStats = [
-            ['value' => number_format($upcomingCount), 'label' => 'Upcoming events'],
-            ['value' => number_format($ticketsSold), 'label' => 'Tickets sold'],
-        ];
+            return [
+                ['value' => number_format($upcomingCount), 'label' => 'Upcoming events'],
+                ['value' => number_format($ticketsSold), 'label' => 'Tickets sold'],
+            ];
+        });
 
         $filters = [
             'search' => $request->input('search'),
