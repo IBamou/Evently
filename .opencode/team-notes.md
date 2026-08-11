@@ -170,3 +170,20 @@
 - **PHPStan level 8**: clean (via ignoreErrors for trait generics).
 - **Pint**: clean.
 - Committed `c0bd5d2`. NOT pushed — main ahead of origin by 16.
+
+## Simplification pass (2026-08-11) — DONE, pushed
+
+### DRY patterns extracted
+- **CheckInController::scanResponse()**: consolidated 5 identical scan response blocks (valid=false + JSON/redirect) into a single private method.
+- **Admin/EventController::runAction()**: consolidated 4 identical try/catch/redirect blocks (publish, reject, cancel, restore) into a single helper.
+- **Organizer/EventController::runAction()**: same pattern with `callable` to handle different action signatures (update, cancel, submit).
+
+### Admin Dashboard deduplication
+- **Admin/DashboardController** reduced from 166 lines to 22 lines: deleted duplicated `chartSeries()` and `categoryBars()` methods, now delegates to `DashboardService::buildDashboardData()` (null $user = platform-wide mode).
+- **DashboardService** updated to accept nullable `?User $user` — null queries all events (admin), non-null scopes to user's events (organizer). Uses `->when()` for conditional scoping.
+- **checkInRate** type aligned: `null` when no tickets (admin), `float` with 1 decimal otherwise.
+
+### Verification
+- **400 passed** (1166 assertions) — all green.
+- **Pint**: clean (5 files auto-fixed).
+- Committed `3ae39eb`. Pushed to origin.
