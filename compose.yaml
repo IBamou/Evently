@@ -30,7 +30,7 @@ services:
                 condition: service_started
     queue:
         image: 'sail-8.4/app'
-        command: php artisan queue:work --verbose --sleep=3 --tries=3 --timeout=60 --max-time=3600
+        command: php artisan queue:work --verbose --sleep=3 --tries=3 --timeout=60 --max-time=3600 --queue=default,ai-copilot
         restart: unless-stopped
         environment:
             WWWUSER: '${WWWUSER:-1000}'
