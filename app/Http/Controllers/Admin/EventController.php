@@ -167,13 +167,7 @@ class EventController extends Controller
     {
         $this->authorize('publish', $event);
 
-        try {
-            (new PublishEventAction)($event);
-
-            return redirect()->back()->with('success', 'Event published.');
-        } catch (RuntimeException $e) {
-            return redirect()->back()->with('error', $e->getMessage());
-        }
+        return $this->runAction(new PublishEventAction, $event, 'Event published.');
     }
 
     /**
@@ -183,13 +177,7 @@ class EventController extends Controller
     {
         $this->authorize('reject', $event);
 
-        try {
-            (new RejectEventAction)($event);
-
-            return redirect()->back()->with('success', 'Event rejected, returned to draft.');
-        } catch (RuntimeException $e) {
-            return redirect()->back()->with('error', $e->getMessage());
-        }
+        return $this->runAction(new RejectEventAction, $event, 'Event rejected, returned to draft.');
     }
 
     /**
@@ -199,13 +187,7 @@ class EventController extends Controller
     {
         $this->authorize('cancel', $event);
 
-        try {
-            (new CancelEventAction)($event);
-
-            return redirect()->back()->with('success', 'Event cancelled.');
-        } catch (RuntimeException $e) {
-            return redirect()->back()->with('error', $e->getMessage());
-        }
+        return $this->runAction(new CancelEventAction, $event, 'Event cancelled.');
     }
 
     /**
@@ -229,10 +211,15 @@ class EventController extends Controller
 
         $this->authorize('restore', $event);
 
-        try {
-            (new RestoreEventAction)($event);
+        return $this->runAction(new RestoreEventAction, $event, 'Event restored.');
+    }
 
-            return redirect()->back()->with('success', 'Event restored.');
+    private function runAction(object $action, Event $event, string $message): RedirectResponse
+    {
+        try {
+            $action($event);
+
+            return redirect()->back()->with('success', $message);
         } catch (RuntimeException $e) {
             return redirect()->back()->with('error', $e->getMessage());
         }

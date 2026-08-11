@@ -109,53 +109,21 @@ class CheckInController extends Controller
         $wantsJson = $request->expectsJson() || $request->isXmlHttpRequest();
 
         if (! $ticket) {
-            $result = [
-                'valid' => false,
-                'result' => 'not_found',
-                'message' => 'No ticket found for this event.',
-            ];
-
-            return $wantsJson
-                ? response()->json($result, 404)
-                : redirect()->back()->withInput()->withErrors(['code' => $result['message']]);
+            return $this->scanResponse($wantsJson, 'not_found', 'No ticket found for this event.', 404);
         }
 
         if ($event->status === EventStatus::Cancelled) {
-            $result = [
-                'valid' => false,
-                'result' => 'event_cancelled',
-                'message' => 'This event has been cancelled.',
-            ];
-
-            return $wantsJson
-                ? response()->json($result, 422)
-                : redirect()->back()->withInput()->withErrors(['code' => $result['message']]);
+            return $this->scanResponse($wantsJson, 'event_cancelled', 'This event has been cancelled.');
         }
 
         if ($ticket->status === TicketStatus::Cancelled) {
-            $result = [
-                'valid' => false,
-                'result' => 'cancelled',
-                'message' => 'This ticket has been cancelled.',
-            ];
-
-            return $wantsJson
-                ? response()->json($result, 422)
-                : redirect()->back()->withInput()->withErrors(['code' => $result['message']]);
+            return $this->scanResponse($wantsJson, 'cancelled', 'This ticket has been cancelled.');
         }
 
         if ($ticket->status === TicketStatus::Used) {
-            $checkedInAt = $ticket->checked_in_at?->format('g:i A') ?? 'previously';
+            $at = $ticket->checked_in_at?->format('g:i A') ?? 'previously';
 
-            $result = [
-                'valid' => false,
-                'result' => 'already_used',
-                'message' => "This ticket was already checked in at {$checkedInAt}.",
-            ];
-
-            return $wantsJson
-                ? response()->json($result, 422)
-                : redirect()->back()->withInput()->withErrors(['code' => $result['message']]);
+            return $this->scanResponse($wantsJson, 'already_used', "This ticket was already checked in at {$at}.");
         }
 
         // Atomic conditional UPDATE (double-scan race protection per REQ-TK-004)
@@ -170,34 +138,32 @@ class CheckInController extends Controller
             ]);
 
         if ($updated === 0) {
-            $result = [
-                'valid' => false,
-                'result' => 'already_used',
-                'message' => 'This ticket was just checked in by another scanner.',
-            ];
-
-            return $wantsJson
-                ? response()->json($result, 422)
-                : redirect()->back()->withInput()->withErrors(['code' => $result['message']]);
+            return $this->scanResponse($wantsJson, 'already_used', 'This ticket was just checked in by another scanner.');
         }
-
-        $ticketTypeName = $ticket->ticketType?->name;
 
         $result = [
             'valid' => true,
             'result' => 'checked_in',
             'message' => 'Welcome in!',
             'ticket' => [
-                'type' => $ticketTypeName ?? 'Ticket',
+                'type' => $ticket->ticketType?->name ?? 'Ticket',
                 'holder_name' => $ticket->user->name ?? 'Guest',
                 'checked_in_at' => now()->toIso8601String(),
             ],
-            // Live counters so the fetch-based view refreshes without reloading.
             'stats' => $this->statsFor($event),
         ];
 
         return $wantsJson
             ? response()->json($result)
             : redirect()->back()->with('checkin_success', $result);
+    }
+
+    private function scanResponse(bool $wantsJson, string $result, string $message, int $code = 422): JsonResponse|RedirectResponse
+    {
+        $payload = ['valid' => false, 'result' => $result, 'message' => $message];
+
+        return $wantsJson
+            ? response()->json($payload, $code)
+            : redirect()->back()->withInput()->withErrors(['code' => $message]);
     }
 }

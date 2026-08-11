@@ -8,6 +8,7 @@ use App\Enums\PaymentStatus;
 use App\Enums\TicketStatus;
 use App\Models\Booking;
 use App\Models\BookingItem;
+use App\Models\Event;
 use App\Models\Payment;
 use App\Models\Ticket;
 use App\Models\User;
@@ -17,10 +18,15 @@ class DashboardService
 {
     /**
      * Build all data for the organizer dashboard.
+     *
+     * Pass null for $user to get platform-wide data (admin mode).
      */
-    public function buildDashboardData(User $user): array
+    public function buildDashboardData(?User $user = null): array
     {
-        $events = $user->events()->get();
+        $events = $user
+            ? $user->events()->get()
+            : Event::query()->get();
+
         $eventIds = $events->pluck('id');
 
         $stats = [
@@ -31,25 +37,31 @@ class DashboardService
             'cancelled' => $events->where('status', EventStatus::Cancelled)->count(),
         ];
 
-        $revenue = (float) Payment::query()
-            ->where('status', PaymentStatus::Succeeded->value)
-            ->whereHas('booking', fn ($q) => $q->whereIn('event_id', $eventIds))
-            ->sum('amount');
+        $revenueQuery = Payment::query()->where('status', PaymentStatus::Succeeded->value);
+        $revenueQuery = $eventIds->isEmpty()
+            ? $revenueQuery
+            : $revenueQuery->whereHas('booking', fn ($q) => $q->whereIn('event_id', $eventIds));
+        $revenue = (float) $revenueQuery->sum('amount');
 
-        $ticketsIssued = Ticket::query()
-            ->whereIn('event_id', $eventIds)
+        $ticketsQuery = Ticket::query();
+        $ticketsQuery = $eventIds->isEmpty()
+            ? $ticketsQuery
+            : $ticketsQuery->whereIn('event_id', $eventIds);
+        $ticketsIssued = (clone $ticketsQuery)
             ->whereIn('status', [TicketStatus::Valid->value, TicketStatus::Used->value])
             ->count();
-
-        $ticketsChecked = Ticket::query()
-            ->whereIn('event_id', $eventIds)
+        $ticketsChecked = (clone $ticketsQuery)
             ->where('status', TicketStatus::Used->value)
             ->count();
 
-        $checkInRate = $ticketsIssued > 0 ? (int) round($ticketsChecked / $ticketsIssued * 100) : 0;
+        $checkInRate = $ticketsIssued > 0 ? round($ticketsChecked / $ticketsIssued * 100, 1) : null;
 
-        $orders = Booking::query()
-            ->whereIn('event_id', $eventIds)
+        $ordersQuery = Booking::query();
+        $ordersQuery = $eventIds->isEmpty()
+            ? $ordersQuery
+            : $ordersQuery->whereIn('event_id', $eventIds);
+
+        $orders = $ordersQuery
             ->with(['user:id,name', 'event:id,title'])
             ->latest()
             ->limit(6)
@@ -76,16 +88,18 @@ class DashboardService
                 ];
             });
 
-        $chart = $this->chartSeries($eventIds);
-        $catBars = $this->categoryBars($eventIds);
+        $chart = $this->chartSeries($eventIds->isEmpty() ? null : $eventIds);
+        $catBars = $this->categoryBars($eventIds->isEmpty() ? null : $eventIds);
 
         return compact('stats', 'revenue', 'ticketsIssued', 'ticketsChecked', 'checkInRate', 'orders', 'chart', 'catBars');
     }
 
     /**
      * Build the last-5-weeks revenue/tickets series for the dashboard chart.
+     *
+     * When $eventIds is null, returns platform-wide data (admin mode).
      */
-    private function chartSeries(Collection $eventIds): array
+    private function chartSeries(?Collection $eventIds = null): array
     {
         $weeks = collect(range(4, 0))->map(
             fn (int $offset): array => [
@@ -99,11 +113,11 @@ class DashboardService
         foreach ($weeks as $week) {
             $revenue[] = (float) Payment::query()
                 ->where('status', PaymentStatus::Succeeded->value)
-                ->whereHas('booking', fn ($q) => $q->whereIn('event_id', $eventIds))
+                ->when($eventIds, fn ($q) => $q->whereHas('booking', fn ($bq) => $bq->whereIn('event_id', $eventIds)))
                 ->whereBetween('paid_at', [$week['start'], $week['end']])
                 ->sum('amount');
             $tickets[] = Ticket::query()
-                ->whereIn('event_id', $eventIds)
+                ->when($eventIds, fn ($q) => $q->whereIn('event_id', $eventIds))
                 ->whereBetween('created_at', [$week['start'], $week['end']])
                 ->count();
         }
@@ -126,14 +140,16 @@ class DashboardService
 
     /**
      * Aggregate ticket quantities per event category for the dashboard.
+     *
+     * When $eventIds is null, returns platform-wide data (admin mode).
      */
-    private function categoryBars(Collection $eventIds): array
+    private function categoryBars(?Collection $eventIds = null): array
     {
         $colors = ['var(--primary)', 'var(--cyan)', 'var(--teal)', '#7C3AED', '#F59E0B'];
 
         $rows = BookingItem::query()
             ->whereHas('booking', function ($q) use ($eventIds): void {
-                $q->whereIn('event_id', $eventIds)
+                $q->when($eventIds, fn ($bq) => $bq->whereIn('event_id', $eventIds))
                     ->where('status', BookingStatus::Confirmed->value);
             })
             ->with('booking.event.category:id,name')
@@ -148,7 +164,6 @@ class DashboardService
         }
 
         $total = $rows->sum();
-
         $labels = $rows->keys()->all();
 
         return $rows->values()->map(function (int $qty, int $i) use ($labels, $total, $colors): array {

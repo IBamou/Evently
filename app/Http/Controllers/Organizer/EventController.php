@@ -119,15 +119,7 @@ class EventController extends Controller
     {
         $this->authorize('update', $event);
 
-        try {
-            $data = $request->validated();
-
-            (new UpdateEventAction)($event, $data);
-
-            return redirect()->back()->with('success', 'Event updated successfully.');
-        } catch (RuntimeException $e) {
-            return redirect()->back()->with('error', $e->getMessage());
-        }
+        return $this->runAction(fn () => (new UpdateEventAction)($event, $request->validated()), 'Event updated successfully.');
     }
 
     /**
@@ -149,13 +141,7 @@ class EventController extends Controller
     {
         $this->authorize('cancel', $event);
 
-        try {
-            (new CancelEventAction)($event);
-
-            return redirect()->back()->with('success', 'Event cancelled.');
-        } catch (RuntimeException $e) {
-            return redirect()->back()->with('error', $e->getMessage());
-        }
+        return $this->runAction(fn () => (new CancelEventAction)($event), 'Event cancelled.');
     }
 
     /**
@@ -165,10 +151,15 @@ class EventController extends Controller
     {
         $this->authorize('submit', $event);
 
-        try {
-            (new SubmitEventAction)($event);
+        return $this->runAction(fn () => (new SubmitEventAction)($event), 'Event submitted for review.');
+    }
 
-            return redirect()->back()->with('success', 'Event submitted for review.');
+    private function runAction(callable $action, string $message): RedirectResponse
+    {
+        try {
+            $action();
+
+            return redirect()->back()->with('success', $message);
         } catch (RuntimeException $e) {
             return redirect()->back()->with('error', $e->getMessage());
         }
