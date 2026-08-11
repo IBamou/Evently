@@ -4,13 +4,13 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Payment;
-use App\Traits\FiltersAndSorts;
+use App\Traits\Queryable;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 class PaymentController extends Controller
 {
-    use FiltersAndSorts;
+    use Queryable;
 
     /**
      * List all payments (admin, REQ-PY-008).

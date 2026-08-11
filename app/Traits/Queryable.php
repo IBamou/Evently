@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Http\Request;
 
-trait FiltersAndSorts
+trait Queryable
 {
     protected function applySearch(Builder|Relation $query, Request $request, array $searchableFields): void
     {

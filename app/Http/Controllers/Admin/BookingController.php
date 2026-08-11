@@ -6,14 +6,14 @@ use App\Enums\BookingStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Booking;
 use App\Services\BookingService;
-use App\Traits\FiltersAndSorts;
+use App\Traits\Queryable;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 class BookingController extends Controller
 {
-    use FiltersAndSorts;
+    use Queryable;
 
     /**
      * List all bookings (admin).

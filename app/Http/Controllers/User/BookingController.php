@@ -9,7 +9,7 @@ use App\Models\Booking;
 use App\Models\Event;
 use App\Models\User;
 use App\Services\BookingService;
-use App\Traits\FiltersAndSorts;
+use App\Traits\Queryable;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -18,7 +18,7 @@ use RuntimeException;
 
 class BookingController extends Controller
 {
-    use FiltersAndSorts;
+    use Queryable;
 
     /**
      * Show the checkout page with event summary + active ticket types + availability.

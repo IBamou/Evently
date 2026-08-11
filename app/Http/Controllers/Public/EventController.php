@@ -7,14 +7,14 @@ use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Models\Event;
 use App\Models\Ticket;
-use App\Traits\FiltersAndSorts;
+use App\Traits\Queryable;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\View\View;
 
 class EventController extends Controller
 {
-    use FiltersAndSorts;
+    use Queryable;
 
     /**
      * Display a listing of published events (public).

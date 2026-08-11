@@ -6,13 +6,13 @@ use App\Enums\TicketStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Event;
 use App\Models\Ticket;
-use App\Traits\FiltersAndSorts;
+use App\Traits\Queryable;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 class BookingController extends Controller
 {
-    use FiltersAndSorts;
+    use Queryable;
 
     /**
      * List bookings + attendees for an event.

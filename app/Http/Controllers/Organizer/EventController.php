@@ -14,7 +14,7 @@ use App\Http\Requests\Organizer\UpdateEventRequest;
 use App\Models\Category;
 use App\Models\Event;
 use App\Services\Organizer\DashboardService;
-use App\Traits\FiltersAndSorts;
+use App\Traits\Queryable;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
@@ -22,7 +22,7 @@ use RuntimeException;
 
 class EventController extends Controller
 {
-    use FiltersAndSorts;
+    use Queryable;
 
     public function __construct(
         private readonly DashboardService $dashboardService,

@@ -13,7 +13,7 @@ use App\Models\Category;
 use App\Models\Event;
 use App\Models\Payment;
 use App\Models\User;
-use App\Traits\FiltersAndSorts;
+use App\Traits\Queryable;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -22,7 +22,7 @@ use RuntimeException;
 
 class EventController extends Controller
 {
-    use FiltersAndSorts;
+    use Queryable;
 
     /**
      * Display a listing of all events (admin).
