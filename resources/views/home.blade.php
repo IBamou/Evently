@@ -66,6 +66,9 @@
         ],
     ];
 
+    // Default banner: inline SVG fallback when image is missing or fails to load.
+    $defaultBanner = 'data:image/svg+xml,' . rawurlencode('<svg xmlns="http://www.w3.org/2000/svg" width="600" height="400"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#1E3A8A"/><stop offset="100%" stop-color="#7C3AED"/></linearGradient></defs><rect fill="url(#g)" width="600" height="400"/><g fill="none" stroke="rgba(255,255,255,.25)" stroke-width="2"><rect x="230" y="140" width="140" height="120" rx="12"/><line x1="230" y1="172" x2="370" y2="172"/><line x1="268" y1="128" x2="268" y2="152"/><line x1="332" y1="128" x2="332" y2="152"/><circle cx="280" cy="210" r="4" fill="rgba(255,255,255,.3)"/><circle cx="300" cy="210" r="4" fill="rgba(255,255,255,.3)"/><circle cx="320" cy="210" r="4" fill="rgba(255,255,255,.3)"/></g></svg>');
+
     // Card banner URL resized for the rendered size (~150px tall card):
     // rewrite imgix "w=" params down (full-res originals cost 2-7MB each and
     // decode at 5-7k px on the main thread). URLs without a w= param are
@@ -185,9 +188,7 @@
                             @foreach ($featured as $event)
                                 <article class="ev-card" onclick="location.href='{{ $detailUrl($event) }}'" style="width:300px;border:1px solid var(--border);border-radius:16px;overflow:hidden;background:var(--surface);cursor:pointer">
                                     <div style="position:relative;height:150px;background:{{ $coverBg($event) }};background-size:cover">
-                                        @if ($event->banner_url)
-                                            <img src="{{ $bannerUrl($event->banner_url) }}" alt="{{ $event->title }}" loading="lazy" decoding="async" width="600" height="400" @if ($copy === 1 && $loop->first) fetchpriority="high" @endif style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block">
-                                        @endif
+                                        <img src="{{ $bannerUrl($event->banner_url) ?? $defaultBanner }}" alt="{{ $event->title }}" loading="lazy" decoding="async" width="600" height="400" @if ($copy === 1 && $loop->first) fetchpriority="high" @endif onerror="this.onerror=null;this.src='{{ $defaultBanner }}'" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block">
                                         <span style="position:absolute;bottom:11px;left:11px;padding:5px 10px;border-radius:8px;background:rgba(255,255,255,.92);color:#0B2545;font-size:10.5px;font-weight:800;letter-spacing:.5px;text-transform:uppercase">{{ $event->category?->name ?? 'Event' }}</span>
                                     </div>
                                     <div style="padding:14px">
@@ -346,9 +347,7 @@
                     @foreach ($events as $event)
                         <article class="ev-card" onclick="location.href='{{ $detailUrl($event) }}'" style="border:1px solid var(--border);border-radius:16px;overflow:hidden;background:var(--surface);cursor:pointer;content-visibility:auto;contain-intrinsic-size:auto 380px">
                             <div style="position:relative;height:168px;background:{{ $coverBg($event) }};background-size:cover">
-                                @if ($event->banner_url)
-                                    <img src="{{ $bannerUrl($event->banner_url) }}" alt="{{ $event->title }}" loading="lazy" decoding="async" width="600" height="400" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block">
-                                @endif
+                                <img src="{{ $bannerUrl($event->banner_url) ?? $defaultBanner }}" alt="{{ $event->title }}" loading="lazy" decoding="async" width="600" height="400" onerror="this.onerror=null;this.src='{{ $defaultBanner }}'" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block">
                                 <span style="position:absolute;top:11px;left:11px;padding:5px 10px;border-radius:8px;background:rgba(255,255,255,.93);color:#0B2545;font-size:10.5px;font-weight:800;letter-spacing:.5px;text-transform:uppercase">{{ $event->category?->name ?? 'Event' }}</span>
                             </div>
                             <div style="padding:16px;flex:1;display:flex;flex-direction:column;gap:10px">

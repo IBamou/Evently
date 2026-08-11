@@ -4,12 +4,13 @@
 
 <x-app-layout :activeNav="'events'">
 @php
-    // Hero background: banner image when uploaded, else the category gradient
-    // from the shared helper. Blade {{ }} escapes once — e() here would double-
-    // escape & into &amp;amp; and break the imgix w= param (full-res downloads).
-    $heroBg = $event->banner_url
-        ? "url('" . $event->banner_url . "') center/cover"
-        : $event->category_gradient;
+    // Default banner: inline SVG fallback when image is missing or fails to load.
+    $defaultBanner = 'data:image/svg+xml,' . rawurlencode('<svg xmlns="http://www.w3.org/2000/svg" width="600" height="400"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#1E3A8A"/><stop offset="100%" stop-color="#7C3AED"/></linearGradient></defs><rect fill="url(#g)" width="600" height="400"/><g fill="none" stroke="rgba(255,255,255,.25)" stroke-width="2"><rect x="230" y="140" width="140" height="120" rx="12"/><line x1="230" y1="172" x2="370" y2="172"/><line x1="268" y1="128" x2="268" y2="152"/><line x1="332" y1="128" x2="332" y2="152"/><circle cx="280" cy="210" r="4" fill="rgba(255,255,255,.3)"/><circle cx="300" cy="210" r="4" fill="rgba(255,255,255,.3)"/><circle cx="320" cy="210" r="4" fill="rgba(255,255,255,.3)"/></g></svg>');
+
+    // Hero background: always use the category gradient as reliable base.
+    // Banner image overlays via <img> when available — hides on error so
+    // the gradient shows through.
+    $heroBg = $event->category_gradient;
 
     $dateLong = $event->starts_at?->format('D, M j, Y · g:i A') ?: '';
     $isEnded = ! $event->isUpcoming();
@@ -24,6 +25,9 @@
 
     {{-- Hero image/art area --}}
     <div style="position:relative;height:320px;border-radius:20px;overflow:hidden;background:{{ $heroBg }};display:flex;align-items:flex-end;padding:28px">
+        @if ($event->banner_url)
+            <img src="{{ $event->banner_url }}" alt="" loading="lazy" decoding="async" onerror="this.onerror=null;this.style.display='none'" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block">
+        @endif
         <div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(4,20,40,0) 30%,rgba(4,20,40,.78))"></div>
         <div style="position:relative;display:flex;flex-direction:column;gap:12px">
             <div style="display:flex;gap:8px;flex-wrap:wrap">
