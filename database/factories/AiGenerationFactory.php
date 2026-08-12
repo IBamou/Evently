@@ -3,9 +3,9 @@
 namespace Database\Factories;
 
 use App\Enums\AiGenerationStatus;
+use App\Enums\AiOperation;
 use App\Models\AiGeneration;
 use App\Models\User;
-use App\Enums\AiOperation;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
