@@ -19,7 +19,6 @@ return new class extends Migration
             $table->string('status', 20)->default('valid');
             $table->timestamp('issued_at');
             $table->timestamp('checked_in_at')->nullable();
-            $table->foreignId('checked_in_by')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamp('cancelled_at')->nullable();
             $table->timestamps();
 

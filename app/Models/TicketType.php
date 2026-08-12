@@ -3,30 +3,12 @@
 namespace App\Models;
 
 use App\Enums\BookingStatus;
-use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-/**
- * @property int $id
- * @property int $event_id
- * @property string $name
- * @property string|null $description
- * @property string $price
- * @property string $currency
- * @property int $quantity
- * @property int $min_per_booking
- * @property int $max_per_booking
- * @property Carbon|null $sales_start_at
- * @property Carbon|null $sales_end_at
- * @property bool $is_active
- * @property Carbon $created_at
- * @property Carbon $updated_at
- * @property Carbon|null $deleted_at
- */
 class TicketType extends Model
 {
     /** @use HasFactory */

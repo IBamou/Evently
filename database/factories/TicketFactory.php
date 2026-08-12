@@ -30,7 +30,6 @@ class TicketFactory extends Factory
             'status' => TicketStatus::Valid,
             'issued_at' => now(),
             'checked_in_at' => null,
-            'checked_in_by' => null,
             'cancelled_at' => null,
         ];
     }
@@ -40,7 +39,6 @@ class TicketFactory extends Factory
         return $this->state([
             'status' => TicketStatus::Used,
             'checked_in_at' => now(),
-            'checked_in_by' => User::factory()->asOrganizer(),
         ]);
     }
 

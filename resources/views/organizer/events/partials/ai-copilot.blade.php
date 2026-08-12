@@ -1,5 +1,6 @@
 {{-- ═══════════════════════════════════════════════════════════════════════
-    AI Event Copilot — Start screen → AI workspace (tabs: Draft | Polish).
+    AI Event Copilot — Start screen → AI workspace (Draft). Field-level polish
+    lives inline next to each form field (ai-polish-field.blade.php).
 
     Include inside `@if(config('ai.event_copilot.enabled'))` on the organizer
     event create/edit pages (create.blade.php / edit.blade.php). Self-contained:
@@ -8,22 +9,19 @@
     Backend contract (routes/organizer/ai/* — ASYNC, queue-backed):
       POST ai/event-drafts            → 202 { data: { generation_id, status: 'processing' } }
       POST ai/event-fields/transform  → 202 { data: { generation_id, status: 'processing' } }
-      GET  ai/generations/{public_id} → 200 { data: { generation_id, status
-           ('processing'|'success'|'error'|'blocked'), result|null, error_code,
-           error_message, operation, provider_used, model_used, latency_ms } }
+      GET  ai/generations/{generationId} → 200 { data: { generation_id, status
+           ('processing'|'success'|'error'), result|null, error_message } }
            success.result per operation:
              draft:      { title, description, category{id,name,slug}|null,
                            marketing{social_post,email_subject,email_intro}, missing_information[] }
              transform:  { content, language, warnings[] }
-      POST ai/generations/{id}/feedback → { action: applied_field|applied_all|regenerated|dismissed, field? }
-    Errors: { message, error_code } with 403/429/422 — mapped in mapError().
+    Errors: { message, error_code } with 403/422 — mapped in mapError().
     ═══════════════════════════════════════════════════════════════════════ --}}
 @php
     $aiRoutes = [
         'draft' => route('organizer.ai.event-drafts'),
         'transform' => route('organizer.ai.event-fields.transform'),
-        'status' => route('organizer.ai.generations.status', ['generation' => '__GEN__']),
-        'feedback' => route('organizer.ai.generations.feedback', ['generation' => '__GEN__']),
+        'status' => route('organizer.ai.generations.status', ['generationId' => '__GEN__']),
     ];
 @endphp
 
@@ -64,7 +62,7 @@
 
     /* ── Dropdown menu (tone / translate) ── */
     .aix-drop { position: relative; }
-    .aix-menu { position: absolute; top: calc(100% + 6px); left: 0; z-index: 20; min-width: 170px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; box-shadow: 0 14px 34px rgba(9,30,66,.22); padding: 6px; display: flex; flex-direction: column; gap: 2px; }
+    .aix-menu { position: absolute; top: calc(100% + 6px); left: 0; z-index: 9999; min-width: 170px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; box-shadow: 0 14px 34px rgba(9,30,66,.22); padding: 6px; display: flex; flex-direction: column; gap: 2px; }
     .aix-menu button { text-align: left; background: transparent; border: 0; color: var(--text); font-size: 13px; font-weight: 600; padding: 9px 11px; border-radius: 8px; cursor: pointer; }
     .aix-menu button:hover { background: var(--surface2); color: var(--primary); }
 
@@ -85,7 +83,7 @@ window.aixCopilotState = function () {
     // ── boot / state ──
     "open": false,
     "screen": "start",          // 'start' | 'session'
-    "tab": "draft",             // 'draft' | 'polish'
+    "tab": "draft",             // 'draft' (single workspace)
     "routes": window.AIX_ROUTES || {},
     "_storageKey": "aix_copilot_session_v1",
     "_toastTimer": null,
@@ -102,20 +100,11 @@ window.aixCopilotState = function () {
     "draft": null,              // { generation_id, language, suggestions{title,description,category,marketing}, missing_information[] }
     "applied": false,
     "undoSnapshot": null,       // previous form values right before "Apply draft"
-    "formTick": 0,              // bumped whenever JS writes to the event form (drives reactive tab visibility)
-
-    // ── polish ──
-    "polishField": "title",
-    "polishMenu": "Improve",    // just for a11y label
-    "transforming": false,
-    "compare": null,            // { field, action, original, content, language, generation_id, error }
-    "toneMenuOpen": false,
-    "translateMenuOpen": false,
+    "formTick": 0,              // bumped whenever JS writes to the event form
 
     // ── toast ──
     "toastMsg": "",
     "toastVisible": false,
-    "genState": "idle",         // 'idle' | 'generating' | 'transforming'
 
     // ── lifecycle ──
     init() {
@@ -146,12 +135,6 @@ window.aixCopilotState = function () {
     formValue(name) { var el = this.fieldInput(name); return el ? el.value : ''; },
     titleContent() { return (this.formValue('title') || '').trim(); },
     descContent() { return (this.formValue('description') || '').trim(); },
-    canPolish() { return this.formTick >= 0 && !!(this.titleContent() || this.descContent()); },
-    tabVisible(t) {
-        if (t === 'draft') return true;
-        if (t === 'polish') return this.canPolish();
-        return false;
-    },
     eventContext(keys) {
         var ctx = {}, f = this.eventForm(), read = function (k, max) {
             if (!f || !f.elements[k]) return;
@@ -199,7 +182,7 @@ window.aixCopilotState = function () {
             var s = JSON.parse(raw);
             if (!s || !s.draft) return;
             this.screen = s.screen === 'session' ? 'session' : 'start';
-            this.tab = this.tabVisible(s.tab) ? s.tab : 'draft';
+            this.tab = 'draft';
             this.brief = s.brief || '';
             this.audience = s.audience || '';
             this.tone = s.tone || 'friendly';
@@ -207,7 +190,6 @@ window.aixCopilotState = function () {
             this.draft = s.draft;
             this.applied = !!s.applied;
             this.undoSnapshot = s.undo || null;
-            if (this.screen === 'session' && !this.tabVisible(this.tab)) this.tab = 'draft';
             // A page reload wipes the native form; re-apply an already-applied draft so the
             // workspace state matches the form again.
             if (this.applied && this.draft) {
@@ -249,7 +231,7 @@ window.aixCopilotState = function () {
         try { body = await res.json(); } catch (e) { body = null; }
         return { res: res, body: body };
     },
-    // Poll a generation until it finishes (success/error/blocked) or times out.
+    // Poll a generation until it finishes (success/error) or times out.
     // Polls every 1.5s for up to 90s: covers the 30s provider timeout + fallback retry.
     async pollGeneration(genId, onResult, onError) {
         var url = this.routes.status.replace('__GEN__', encodeURIComponent(genId));
@@ -261,7 +243,7 @@ window.aixCopilotState = function () {
             if (!out || !out.body || !out.body.data) continue;
             var d = out.body.data;
             if (d.status === 'success') { onResult(d.result || {}, d.generation_id); return; }
-            if (d.status === 'error' || d.status === 'blocked') {
+            if (d.status === 'error') {
                 onError(this.mapError({ error_code: d.error_code, message: d.error_message }, 200));
                 return;
             }
@@ -317,28 +299,14 @@ window.aixCopilotState = function () {
         document.body.removeChild(ta);
     },
 
-    // ── feedback (fire-and-forget) ──
-    sendFeedback(generationId, action, field) {
-        if (!generationId || !this.routes.feedback) return;
-        var payload = { action: action };
-        if (field) payload.field = field;
-        fetch(this.routes.feedback.replace('__GEN__', encodeURIComponent(generationId)), {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': this.csrf() },
-            body: JSON.stringify(payload),
-        }).catch(() => {});
-    },
-
     // ── navigation ──
     startGeneration() {
         this.open = true;
         if (this.draft) { this.screen = 'session'; this.tab = 'draft'; }
     },
     setTab(t) {
-        if (!this.tabVisible(t)) return;
+        if (t !== 'draft') return;
         this.tab = t;
-        this.toneMenuOpen = false;
-        this.translateMenuOpen = false;
         this.persistSession();
     },
     newDraft() {
@@ -358,7 +326,6 @@ window.aixCopilotState = function () {
         var brief = (this.brief || '').trim();
         if (!brief) { this.draftError = 'Describe your event briefly to get started.'; return; }
         this.busy = true;
-        this.genState = 'generating';
         this.draftError = '';
         try {
             var payload = {
@@ -390,7 +357,6 @@ window.aixCopilotState = function () {
             this.draftError = this.mapError(null, 0);
         } finally {
             this.busy = false;
-            this.genState = 'idle';
         }
     },
     draftFromResult(result, genId) {
@@ -422,7 +388,6 @@ window.aixCopilotState = function () {
         if (!input || !val) return;
         input.value = val;
         this.formTick++;
-        this.sendFeedback(this.draft.generation_id, 'applied_field', key);
         this.toast(key === 'title' ? 'Title updated' : 'Description updated');
     },
     applyDraft() {
@@ -442,7 +407,6 @@ window.aixCopilotState = function () {
             sel.value = String(cat.id);
         }
         this.formTick++;
-        this.sendFeedback(this.draft.generation_id, 'applied_all');
         this.applied = true;
         this.persistSession();
         this.toast('AI draft applied to the form');
@@ -466,89 +430,6 @@ window.aixCopilotState = function () {
         this.persistSession();
         this.toast('Reverted to your previous values');
     },
-
-    // ── polish (field-oriented, always on current form value) ──
-    switchPolishField(field) {
-        if (this.compare && this.compare.field !== field) {
-            this.cancelCompare();
-        }
-        this.polishField = field;
-    },
-    async runPolish(op, toneVal, langVal) {
-        var f = this.polishField;
-        var input = this.fieldInput(f);
-        var content = input ? (input.value || '').trim() : '';
-        if (!content) {
-            this.toast((f === 'title' ? 'Title' : 'Description') + ' is empty — type something first');
-            return;
-        }
-        var action = { op: op, tone: toneVal || null, lang: langVal || null };
-        await this.runTransform(f, action);
-    },
-    async runTransform(field, action) {
-        var input = this.fieldInput(field);
-        var content = input ? (input.value || '').trim() : '';
-        this.transforming = true;
-        this.genState = 'transforming';
-        this.compare = { field: field, action: action, original: content, content: '', generation_id: null, language: 'en', error: '', warnings: [] };
-        try {
-            var payload = {
-                field: field,
-                operation: action.op,
-                content: content,
-                event_context: this.eventContext(['title', 'city']),
-            };
-            if (action.tone) payload.tone = action.tone;
-            if (action.lang) payload.target_language = action.lang;
-            var out = await this.post(this.routes.transform, payload);
-            if (!out.res.ok) {
-                this.compare.error = this.mapError(out.body, out.res.status);
-                return;
-            }
-            var genId = out.body && out.body.data ? out.body.data.generation_id : null;
-            if (!genId) { this.compare.error = 'The AI assistant did not respond. Please try again.'; return; }
-            await this.pollGeneration(genId, (result) => {
-                this.compare.content = result.content || '';
-                this.compare.language = result.language || 'en';
-                this.compare.generation_id = genId;
-                this.compare.warnings = result.warnings || [];
-            }, (err) => {
-                this.compare.error = err;
-            });
-        } catch (e) {
-            this.compare.error = this.mapError(null, 0);
-        } finally {
-            this.transforming = false;
-            this.genState = 'idle';
-        }
-    },
-    applyTransform() {
-        var c = this.compare;
-        if (!c || !c.content) return;
-        var input = this.fieldInput(c.field);
-        if (input) input.value = c.content;
-        this.formTick++;
-        this.sendFeedback(c.generation_id, 'applied_field', c.field);
-        this.compare = null;
-        this.translateMenuOpen = false;
-        this.toneMenuOpen = false;
-        this.persistSession();
-        this.toast('Applied to ' + (c.field === 'title' ? 'title' : 'description'));
-    },
-    regenerateTransform() {
-        var c = this.compare;
-        if (!c) return;
-        this.sendFeedback(c.generation_id, 'regenerated', c.field);
-        this.runTransform(c.field, c.action);
-    },
-    cancel() {
-        var c = this.compare;
-        if (!c) return;
-        this.sendFeedback(c.generation_id, 'dismissed', c.field);
-        this.compare = null;
-        this.translateMenuOpen = false;
-        this.toneMenuOpen = false;
-    }
     };
 };
 </script>
@@ -632,7 +513,6 @@ window.aixCopilotState = function () {
             <div style="flex:0 0 auto;padding:12px 16px 0;display:flex;flex-direction:column;gap:10px">
                 <div class="aix-tabbar" role="tablist" aria-label="Copilot tools">
                     <button type="button" role="tab" class="aix-tab" x-bind:class="tab === 'draft' ? 'aix-tab-active' : ''" x-on:click="setTab('draft')">Draft</button>
-                    <button type="button" role="tab" class="aix-tab" x-show="canPolish()" x-bind:class="tab === 'polish' ? 'aix-tab-active' : ''" x-on:click="setTab('polish')">Polish</button>
                 </div>
                 {{-- Applied confirmation (contextual, replaces permanent Undo All) --}}
                 <div x-cloak x-show="applied" class="aix-applied">
@@ -727,83 +607,6 @@ window.aixCopilotState = function () {
                 </template>
 
                 <div x-cloak x-bind:style="errVis()" class="aix-errbox" x-text="draftError" role="alert"></div>
-            </div>
-
-            {{-- ────────── TAB: POLISH ────────── --}}
-            <div x-show="tab === 'polish'" class="aix-panel" style="gap:14px">
-
-                <div>
-                    <div style="font-size:15px;font-weight:800;color:var(--text)">Polish your event</div>
-                    <div class="aix-hint" style="margin-top:2px">Runs on the current value in the form — polish anything, anytime.</div>
-                </div>
-
-                {{-- Field selector --}}
-                <div class="aix-seg" role="tablist" aria-label="Field to polish">
-                    <button type="button" class="aix-seg-btn" x-bind:class="polishField === 'title' ? 'aix-seg-active' : ''" x-on:click="switchPolishField('title')">Title</button>
-                    <button type="button" class="aix-seg-btn" x-bind:class="polishField === 'description' ? 'aix-seg-active' : ''" x-on:click="switchPolishField('description')">Description</button>
-                </div>
-
-                {{-- Current value --}}
-                <div>
-                    <div class="aix-label" style="margin-bottom:6px">Current <span x-text="polishField === 'title' ? 'title' : 'description'"></span></div>
-                    <div class="aix-prev" style="max-height:none" x-text="polishField === 'title' ? (titleContent() || 'Nothing here yet — type a title first.') : (descContent() || 'Nothing here yet — type a description first.')"></div>
-                </div>
-
-                {{-- Actions (4, with tone/translate submenus) --}}
-                <div style="display:flex;flex-wrap:wrap;gap:8px">
-                    <button type="button" class="aix-chip" x-on:click="runPolish('rewrite')" x-bind:disabled="transforming" style="display:inline-flex;align-items:center;gap:6px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:12px;font-weight:700;padding:8px 11px;border-radius:9px;cursor:pointer;min-height:34px">Improve</button>
-                    <button type="button" class="aix-chip" x-on:click="runPolish('shorten')" x-bind:disabled="transforming" style="display:inline-flex;align-items:center;gap:6px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:12px;font-weight:700;padding:8px 11px;border-radius:9px;cursor:pointer;min-height:34px">Shorten</button>
-
-                    <div class="aix-drop">
-                        <button type="button" class="aix-chip" x-on:click="toneMenuOpen = !toneMenuOpen; translateMenuOpen = false" x-bind:disabled="transforming" style="display:inline-flex;align-items:center;gap:6px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:12px;font-weight:700;padding:8px 11px;border-radius:9px;cursor:pointer;min-height:34px">Change tone ▾</button>
-                        <div x-show="toneMenuOpen" x-on:click.outside="toneMenuOpen = false" class="aix-menu">
-                            <button type="button" x-on:click="toneMenuOpen = false; runPolish('rewrite', 'professional')">Professional</button>
-                            <button type="button" x-on:click="toneMenuOpen = false; runPolish('rewrite', 'friendly')">Friendly</button>
-                            <button type="button" x-on:click="toneMenuOpen = false; runPolish('rewrite', 'energetic')">Energetic</button>
-                        </div>
-                    </div>
-
-                    <div class="aix-drop">
-                        <button type="button" class="aix-chip" x-on:click="translateMenuOpen = !translateMenuOpen; toneMenuOpen = false" x-bind:disabled="transforming" style="display:inline-flex;align-items:center;gap:6px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:12px;font-weight:700;padding:8px 11px;border-radius:9px;cursor:pointer;min-height:34px">Translate ▾</button>
-                        <div x-show="translateMenuOpen" x-on:click.outside="translateMenuOpen = false" class="aix-menu">
-                            <button type="button" x-on:click="translateMenuOpen = false; runPolish('translate', null, 'en')">English</button>
-                            <button type="button" x-on:click="translateMenuOpen = false; runPolish('translate', null, 'fr')">Français</button>
-                            <button type="button" x-on:click="translateMenuOpen = false; runPolish('translate', null, 'ar')">العربية</button>
-                        </div>
-                    </div>
-                </div>
-
-                {{-- Comparison box --}}
-                <div x-cloak x-show="compare" class="aix-section" style="border-color:var(--primary);background:var(--surface2)">
-                    <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
-                        <span class="aix-label" style="color:var(--primary)">AI suggestion —</span>
-                        <div style="flex:1"></div>
-                        <button type="button" class="aix-btn aix-btn-ghost" x-on:click="cancel()" aria-label="Close comparison" style="min-height:30px;padding:5px 9px">✕</button>
-                    </div>
-
-                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-                        <div>
-                            <div class="aix-label" style="margin-bottom:6px">Current</div>
-                            <div class="aix-prev" style="max-height:110px;color:var(--muted)" x-text="compare ? compare.original : ''"></div>
-                        </div>
-                        <div>
-                            <div class="aix-label" style="margin-bottom:6px">AI version</div>
-                            <div class="aix-prev" x-bind:dir="compare && compare.language === 'ar' ? 'rtl' : 'ltr'" x-text="compare ? compare.content : ''"></div>
-                        </div>
-                    </div>
-
-                    <div x-cloak x-show="compare && compare.error" class="aix-errbox" style="margin-top:10px" x-text="compare ? compare.error : ''" role="alert"></div>
-
-                    <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
-                        <button type="button" class="aix-btn" x-on:click="cancel()">Cancel</button>
-                        <button type="button" class="aix-btn" x-on:click="regenerateTransform()" x-bind:disabled="transforming">
-                            <svg x-bind:style="spinVis(transforming)" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
-                            <span x-text="transforming ? 'Generating…' : '↻ Try again'">↻ Try again</span>
-                        </button>
-                        <div style="flex:1"></div>
-                        <button type="button" class="aix-btn aix-btn-primary" x-on:click="applyTransform()" x-bind:disabled="!compare || !compare.content || transforming">Apply</button>
-                    </div>
-                </div>
             </div>
 
             </div>

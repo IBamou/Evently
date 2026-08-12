@@ -74,7 +74,6 @@ class DemoBookingsSeeder extends Seeder
             'status' => TicketStatus::Used,
             'issued_at' => now()->subDays(1),
             'checked_in_at' => now()->subHours(20),
-            'checked_in_by' => $organizer->id,
         ]);
 
         $vipItem = BookingItem::create([
@@ -208,7 +207,6 @@ class DemoBookingsSeeder extends Seeder
             'status' => TicketStatus::Used,
             'issued_at' => now()->subDays(12),
             'checked_in_at' => now()->subDays(10),
-            'checked_in_by' => $organizer->id,
         ]);
 
         // 5) Remote summit — cancelled booking (user changed mind, refunded)

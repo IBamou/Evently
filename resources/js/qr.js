@@ -219,8 +219,8 @@ async function pickCamera(scanner, facingMode) {
 export async function initCameraScanner(config = {}) {
     const {
         elementId = 'qr-scanner',
-        fps = 10,
-        qrbox = 250,
+        fps = 15,
+        qrbox = 200,
         facingMode = 'environment',
         onSuccess = () => {},
         onError = () => {},
@@ -293,6 +293,8 @@ export async function initCameraScanner(config = {}) {
                     fps,
                     qrbox: { width: qrbox, height: qrbox },
                     aspectRatio: 4 / 3, // design: camera area is aspect-ratio 4/3
+                    disableFlip: false,
+                    experimentalFeatures: { useBarCodeDetectorIfSupported: true },
                 },
                 (decodedText, result) => {
                     if (processing) {

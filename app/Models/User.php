@@ -11,9 +11,7 @@ use Illuminate\Notifications\Notifiable;
 
 /**
  * The platform user.
- *
- * @property UserRole $role
- */
+ * */
 class User extends Authenticatable implements MustVerifyEmail
 {
     /** @use HasFactory */
@@ -78,5 +76,10 @@ class User extends Authenticatable implements MustVerifyEmail
     public function tickets(): HasMany
     {
         return $this->hasMany(Ticket::class);
+    }
+
+    public function aiGenerations(): HasMany
+    {
+        return $this->hasMany(AiGeneration::class);
     }
 }

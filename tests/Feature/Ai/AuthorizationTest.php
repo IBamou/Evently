@@ -1,6 +1,6 @@
 <?php
 
-use App\Ai\Agents\GenerateEventDraftAgent;
+use App\Ai\Agents\EventDraftAgent;
 use App\Enums\UserRole;
 use App\Models\User;
 use Illuminate\Support\Facades\Cache;
@@ -35,7 +35,7 @@ it('allows organizer to access AI endpoints', function () {
     $user = User::factory()->create(['role' => UserRole::Organizer]);
     config(['ai.event_copilot.enabled' => true]);
 
-    GenerateEventDraftAgent::fake([
+    EventDraftAgent::fake([
         [
             'title' => 'Test Event',
             'description' => 'Test description',
@@ -63,6 +63,18 @@ it('allows organizer to access AI endpoints', function () {
             ],
         ])
         ->assertJsonPath('data.status', 'processing');
+});
+
+it('allows an organizer to open the AI event workspace', function () {
+    $user = User::factory()->create(['role' => UserRole::Organizer]);
+    config(['ai.event_copilot.enabled' => true]);
+
+    $this->actingAs($user)
+        ->get(route('organizer.ai.workspace'))
+        ->assertOk()
+        ->assertSee('AI Event Copilot')
+        ->assertSee('Draft setup')
+        ->assertSee('Your draft will appear here');
 });
 
 it('returns 403 ai_feature_disabled when copilot is disabled', function () {

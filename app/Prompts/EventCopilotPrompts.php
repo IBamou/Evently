@@ -4,13 +4,17 @@ namespace App\Prompts;
 
 class EventCopilotPrompts
 {
-    public static function generateDraft(array $categories, string $promptVersion): array
+    /**
+     * Static system prompt for draft generation.
+     * Categories are injected at runtime since their data, not config.
+     */
+    public static function generateDraft(array $categories, string $promptVersion): string
     {
         $categoryList = collect($categories)->map(
             fn ($cat) => "- ID: {$cat['id']}, Name: {$cat['name']}, Slug: {$cat['slug']}"
         )->implode("\n");
 
-        $system = <<<PROMPT
+        return <<<PROMPT
 You are an expert event marketing assistant for Evently, an event booking platform in Morocco.
 
 Your task: Generate event content based on the organizer's brief.
@@ -47,9 +51,6 @@ Your task: Generate event content based on the organizer's brief.
 8. Never include phrases like "AI-generated" or "created by AI".
 
 ## PROMPT VERSION: {$promptVersion}
-PROMPT;
-
-        $system .= <<<'PROMPT'
 
 ## OUTPUT FORMAT
 
@@ -66,10 +67,11 @@ Return a JSON object with exactly these keys:
   "missing_information": ["string"]
 }
 PROMPT;
-
-        return [$system];
     }
 
+    /**
+     * Static system prompt for field transformation.
+     */
     public static function transformField(string $promptVersion): string
     {
         return <<<PROMPT

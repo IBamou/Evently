@@ -4,7 +4,6 @@ namespace App\Models;
 
 use App\Enums\EventFormat;
 use App\Enums\EventStatus;
-use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -13,24 +12,6 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-/**
- * @property int $id
- * @property int $category_id
- * @property int $organizer_id
- * @property string $title
- * @property string $slug
- * @property string $description
- * @property string $location
- * @property string $city
- * @property EventFormat $format
- * @property EventStatus $status
- * @property Carbon|null $starts_at
- * @property Carbon|null $ends_at
- * @property string|null $banner_url
- * @property Carbon $created_at
- * @property Carbon $updated_at
- * @property Carbon|null $deleted_at
- */
 class Event extends Model
 {
     /** @use HasFactory */

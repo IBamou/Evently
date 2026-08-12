@@ -19,6 +19,7 @@
             header nav::-webkit-scrollbar { display: none; }
         }
         @media (max-width: 640px) {
+            header nav { display: none !important; }
             header a[aria-label="My tickets"] { display: none; }
         }
     </style>

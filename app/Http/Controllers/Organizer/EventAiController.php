@@ -2,68 +2,70 @@
 
 namespace App\Http\Controllers\Organizer;
 
-use App\Actions\Ai\DispatchGenerationAction;
+use App\Enums\AiOperation;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Organizer\Ai\GenerateEventDraftRequest;
-use App\Http\Requests\Organizer\Ai\GenerationFeedbackRequest;
 use App\Http\Requests\Organizer\Ai\TransformEventFieldRequest;
+use App\Jobs\EventGenerationJob;
 use App\Models\AiGeneration;
-use App\Services\Ai\AiGenerationRecorder;
-use App\Services\Ai\AiGenerationService;
+use App\Services\Ai\GenerationPersistenceService;
+use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 
 class EventAiController extends Controller
 {
     public function __construct(
-        private readonly AiGenerationRecorder $recorder,
-        private readonly AiGenerationService $service,
-        private readonly DispatchGenerationAction $dispatchGeneration,
+        private GenerationPersistenceService $persistence,
     ) {}
 
     public function generateDraft(GenerateEventDraftRequest $request): JsonResponse
     {
-        return ($this->dispatchGeneration)(
-            $request,
-            'generate_draft',
-            fn ($r) => $r->validated(),
-        );
+        return $this->dispatchGeneration($request, AiOperation::DRAFT);
     }
 
     public function transformField(TransformEventFieldRequest $request): JsonResponse
     {
-        return ($this->dispatchGeneration)(
-            $request,
-            'transform_field',
-            fn ($r) => $r->validated(),
-        );
+        return $this->dispatchGeneration($request, AiOperation::TRANSFORM);
     }
 
-    /**
-     * Poll the status of a generation.
-     */
-    public function status(AiGeneration $generation): JsonResponse
+    public function status(Request $request, int $generationId): JsonResponse
     {
-        $this->authorize('view', $generation);
+        $generation = AiGeneration::query()
+            ->where('user_id', $request->user()->id)
+            ->findOrFail($generationId);
 
         return response()->json([
-            'data' => $this->service->statusPayload($generation),
+            'data' => [
+                'generation_id' => $generation->id,
+                'status' => $generation->status,
+                'result' => $generation->result,
+                'error_message' => $generation->error_message,
+            ],
         ]);
     }
 
-    public function recordFeedback(AiGeneration $generation, GenerationFeedbackRequest $feedbackRequest): JsonResponse
+    public function workspace()
     {
-        $this->authorize('feedback', $generation);
+        return view('organizer.ai.workspace');
+    }
 
-        $validated = $feedbackRequest->validated();
-
-        $this->recorder->recordFeedback(
-            generation: $generation,
-            action: $validated['action'],
-            field: $validated['field'] ?? null,
+    private function dispatchGeneration(FormRequest $request, AiOperation $operation): JsonResponse
+    {
+        $generation = $this->persistence->create(
+            $request->user(),
+            $operation->value,
+            $request->validated(),
         );
 
+        EventGenerationJob::dispatch($generation);
+
         return response()->json([
-            'message' => 'Feedback recorded.',
-        ]);
+            'data' => [
+                'generation_id' => $generation->id,
+                'status' => $generation->status,
+            ],
+        ], Response::HTTP_ACCEPTED);
     }
 }

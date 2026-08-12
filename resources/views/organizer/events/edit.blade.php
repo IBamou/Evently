@@ -20,7 +20,10 @@
             <span style="padding:5px 10px;border-radius:8px;font-size:11px;font-weight:800;text-transform:uppercase;background:{{ $badgeBg }};color:{{ $badgeFg }}">{{ $event->status->label() }}</span>
             <div style="flex:1"></div>
             @if (config('ai.event_copilot.enabled'))
-                @include('organizer.events.partials.ai-copilot')
+                <a href="{{ route('organizer.ai.workspace') }}" style="display:inline-flex;align-items:center;gap:7px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:12.5px;font-weight:700;padding:10px 16px;border-radius:10px;min-height:40px;text-decoration:none">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l1.9 5.7L19.6 10l-5.7 1.9L12 17.6l-1.9-5.7L4.4 10l5.7-1.9z"/><path d="M19 15l.9 2.6 2.6.9-2.6.9L19 22l-.9-2.6-2.6-.9 2.6-.9z"/></svg>
+                    <span>AI copilot</span>
+                </a>
             @endif
             <a href="{{ route('organizer.ticket-types.index', $event) }}" style="border:1px solid var(--border);background:var(--surface);cursor:pointer;font-size:12.5px;font-weight:700;padding:10px 15px;border-radius:10px;min-height:40px;text-decoration:none;color:var(--text);display:inline-flex;align-items:center">Ticket types</a>
         </div>
@@ -50,8 +53,18 @@
 
             {{-- Basics --}}
             <div style="display:flex;flex-direction:column;gap:16px">
-                <label style="display:flex;flex-direction:column;gap:7px"><span style="font-size:12.5px;font-weight:700">Event title</span><input type="text" name="title" value="{{ old('title', $event->title) }}" placeholder="e.g. Casablanca Jazz Night" required style="min-height:48px;padding:13px 15px;border:1px solid var(--border);background:var(--surface2);border-radius:12px;font-size:14.5px;outline:none"></label>
-                <label style="display:flex;flex-direction:column;gap:7px"><span style="font-size:12.5px;font-weight:700">Description</span><textarea name="description" rows="4" placeholder="What should attendees expect?" required style="padding:13px 15px;border:1px solid var(--border);background:var(--surface2);border-radius:12px;font-size:14.5px;outline:none;resize:vertical;line-height:1.6">{{ old('description', $event->description) }}</textarea></label>
+                <div style="position:relative">
+                    <label style="display:flex;flex-direction:column;gap:7px"><span style="font-size:12.5px;font-weight:700">Event title</span><input type="text" name="title" value="{{ old('title', $event->title) }}" placeholder="e.g. Casablanca Jazz Night" required style="min-height:48px;padding:13px 15px;border:1px solid var(--border);background:var(--surface2);border-radius:12px;font-size:14.5px;outline:none"></label>
+                    @if (config('ai.event_copilot.enabled'))
+                        @include('organizer.events.partials.ai-polish-field', ['field' => 'title'])
+                    @endif
+                </div>
+                <div style="position:relative">
+                    <label style="display:flex;flex-direction:column;gap:7px"><span style="font-size:12.5px;font-weight:700">Description</span><textarea name="description" rows="4" placeholder="What should attendees expect?" required style="padding:13px 15px;border:1px solid var(--border);background:var(--surface2);border-radius:12px;font-size:14.5px;outline:none;resize:vertical;line-height:1.6">{{ old('description', $event->description) }}</textarea></label>
+                    @if (config('ai.event_copilot.enabled'))
+                        @include('organizer.events.partials.ai-polish-field', ['field' => 'description'])
+                    @endif
+                </div>
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
                     <label style="display:flex;flex-direction:column;gap:7px"><span style="font-size:12.5px;font-weight:700">Category</span>
                         <select name="category_id" required style="min-height:48px;padding:13px 15px;border:1px solid var(--border);background:var(--surface2);border-radius:12px;font-size:14.5px;outline:none">
@@ -97,4 +110,27 @@
         </form>
     </div>
 
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            try {
+                var raw = sessionStorage.getItem('aix_copilot_session_v1');
+                if (!raw) return;
+                var s = JSON.parse(raw);
+                if (!s || !s.applied || !s.draft) return;
+                var sug = s.draft.suggestions || {};
+                var form = document.getElementById('event-form');
+                if (!form) return;
+                if (sug.title) { var el = form.elements['title']; if (el && !el.value) el.value = sug.title; }
+                if (sug.description) { var el = form.elements['description']; if (el && !el.value) el.value = sug.description; }
+                if (sug.category && sug.category.id) {
+                    var sel = form.elements['category_id'];
+                    if (sel) {
+                        var opt = Array.prototype.find.call(sel.options, function (o) { return String(o.value) === String(sug.category.id); });
+                        if (opt) sel.value = String(sug.category.id);
+                    }
+                }
+                sessionStorage.removeItem('aix_copilot_session_v1');
+            } catch (e) {}
+        });
+    </script>
 </x-app-layout>

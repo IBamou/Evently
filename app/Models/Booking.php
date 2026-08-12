@@ -4,29 +4,12 @@ namespace App\Models;
 
 use App\Enums\BookingStatus;
 use App\Enums\TicketStatus;
-use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Str;
 
-/**
- * @property int $id
- * @property int $user_id
- * @property int $event_id
- * @property string $reference
- * @property BookingStatus $status
- * @property string $subtotal
- * @property string $fees
- * @property string $total
- * @property string $currency
- * @property Carbon|null $expires_at
- * @property Carbon|null $confirmed_at
- * @property Carbon|null $cancelled_at
- * @property Carbon $created_at
- * @property Carbon $updated_at
- */
 class Booking extends Model
 {
     /** @use HasFactory */

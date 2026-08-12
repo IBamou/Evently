@@ -39,7 +39,7 @@
                     style="width:40px;height:40px;border:0;border-radius:50%;background:{{ $avatar['grad'] }};color:#fff;display:grid;place-items:center;font-weight:700;font-size:14px;cursor:pointer;padding:0">{{ $avatarInitials }}</button>
 
             <div x-show="accountMenuOpen" x-cloak
-                 style="position:absolute;top:calc(100% + 10px);right:0;width:260px;background:var(--surface);border:1px solid var(--border);border-radius:12px;box-shadow:0 12px 32px rgba(9,30,66,.14);padding:8px;z-index:50">
+                 style="position:absolute;top:calc(100% + 10px);right:0;width:260px;background:var(--surface);border:1px solid var(--border);border-radius:12px;box-shadow:0 12px 32px rgba(9,30,66,.14);padding:8px;z-index:9999">
                 <div style="padding:10px 12px;border-bottom:1px solid var(--border)">
                     <div style="font-size:14px;font-weight:800;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ auth()->user()->name }}</div>
                     <div style="font-size:12.5px;color:var(--muted);font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ auth()->user()->email }}</div>

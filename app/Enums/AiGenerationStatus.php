@@ -4,8 +4,7 @@ namespace App\Enums;
 
 enum AiGenerationStatus: string
 {
-    case PROCESSING = 'processing';
-    case SUCCESS = 'success';
-    case ERROR = 'error';
-    case BLOCKED = 'blocked';
+    case Processing = 'processing';
+    case Success = 'success';
+    case Error = 'error';
 }

@@ -44,8 +44,6 @@ return [
         'transform_operations' => ['rewrite', 'shorten', 'expand', 'translate'],
 
         'transform_fields' => ['title', 'description'],
-
-        'feedback_actions' => ['applied_field', 'applied_all', 'regenerated', 'dismissed'],
     ],
 
 ];

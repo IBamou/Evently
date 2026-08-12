@@ -1,8 +1,6 @@
 <?php
 
-use App\Enums\AiGenerationStatus;
 use App\Enums\UserRole;
-use App\Models\AiGeneration;
 use App\Models\User;
 use Illuminate\Support\Facades\Queue;
 
@@ -93,51 +91,6 @@ it('validates transform with valid payload', function () {
 
     $response->assertStatus(422)
         ->assertJsonValidationErrors('content');
-});
-
-it('rejects feedback with invalid action', function () {
-    $generation = AiGeneration::factory()->create([
-        'user_id' => $this->user->id,
-        'status' => AiGenerationStatus::SUCCESS,
-    ]);
-
-    $response = $this->actingAs($this->user)->postJson(
-        route('organizer.ai.generations.feedback', ['generation' => $generation->public_id]),
-        ['action' => 'invalid_action'],
-    );
-
-    $response->assertStatus(422)
-        ->assertJsonValidationErrors('action');
-});
-
-it('requires field when action is applied_field', function () {
-    $generation = AiGeneration::factory()->create([
-        'user_id' => $this->user->id,
-        'status' => AiGenerationStatus::SUCCESS,
-    ]);
-
-    $response = $this->actingAs($this->user)->postJson(
-        route('organizer.ai.generations.feedback', ['generation' => $generation->public_id]),
-        ['action' => 'applied_field'],
-    );
-
-    $response->assertStatus(422)
-        ->assertJsonValidationErrors('field');
-});
-
-it('rejects field with invalid value', function () {
-    $generation = AiGeneration::factory()->create([
-        'user_id' => $this->user->id,
-        'status' => AiGenerationStatus::SUCCESS,
-    ]);
-
-    $response = $this->actingAs($this->user)->postJson(
-        route('organizer.ai.generations.feedback', ['generation' => $generation->public_id]),
-        ['action' => 'applied_field', 'field' => 'invalid_field'],
-    );
-
-    $response->assertStatus(422)
-        ->assertJsonValidationErrors('field');
 });
 
 it('accepts draft event_context.description exactly at the configured limit', function () {

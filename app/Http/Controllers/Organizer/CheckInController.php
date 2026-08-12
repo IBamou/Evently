@@ -134,7 +134,6 @@ class CheckInController extends Controller
             ->update([
                 'status' => TicketStatus::Used->value,
                 'checked_in_at' => now(),
-                'checked_in_by' => $user->id,
             ]);
 
         if ($updated === 0) {

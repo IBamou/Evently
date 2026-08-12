@@ -251,12 +251,18 @@
             if (window.EventlyQr) {
                 window.EventlyQr.initCameraScanner({
                     elementId: 'qr-scanner',
+                    fps: 15,
+                    qrbox: 200,
                     onSuccess: function (code) {
                         checkIn(String(code).trim());
                     },
-                    onError: function () {
+                    onError: function (err) {
                         var fb = document.getElementById('cam-fallback');
                         if (fb) fb.style.display = 'block';
+                    },
+                    onScanError: function () {
+                        // Per-frame decode error — scanner is active but no QR found yet.
+                        // This is expected noise; no action needed.
                     },
                 }).then(function (handle) {
                     scannerHandle = handle;

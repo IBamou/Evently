@@ -4,7 +4,6 @@ namespace App\Http\Controllers\User;
 
 use App\Enums\TicketStatus;
 use App\Http\Controllers\Controller;
-use App\Models\Event;
 use App\Models\Ticket;
 use App\Models\User;
 use Carbon\Carbon;

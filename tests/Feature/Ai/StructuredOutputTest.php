@@ -1,7 +1,7 @@
 <?php
 
-use App\Ai\Agents\GenerateEventDraftAgent;
-use App\Ai\Agents\TransformEventFieldAgent;
+use App\Ai\Agents\EventDraftAgent;
+use App\Ai\Agents\EventPolishAgent;
 use App\Enums\UserRole;
 use App\Models\Category;
 use App\Models\User;
@@ -17,8 +17,8 @@ beforeEach(function () {
     ]);
 });
 
-it('returns valid draft output with null category via polling', function () {
-    GenerateEventDraftAgent::fake([
+it('returns a validated draft with null category via polling', function () {
+    EventDraftAgent::fake([
         [
             'title' => 'Music Festival 2026',
             'description' => 'An amazing music festival featuring top artists.',
@@ -43,9 +43,8 @@ it('returns valid draft output with null category via polling', function () {
 
     $generationId = $response->json('data.generation_id');
 
-    // Poll the status endpoint (job ran inline with sync queue)
     $statusResponse = $this->actingAs($this->user)->getJson(
-        route('organizer.ai.generations.status', ['generation' => $generationId]),
+        route('organizer.ai.generations.status', ['generationId' => $generationId]),
     );
 
     $statusResponse->assertOk()
@@ -64,19 +63,19 @@ it('returns valid draft output with null category via polling', function () {
                     ],
                     'missing_information',
                 ],
-                'error_code',
                 'error_message',
             ],
         ])
         ->assertJsonPath('data.status', 'success')
         ->assertJsonPath('data.result.title', 'Music Festival 2026')
-        ->assertJsonPath('data.result.category', null);
+        ->assertJsonPath('data.result.category', null)
+        ->assertJsonPath('data.result.missing_information', ['ticket prices', 'lineup details']);
 });
 
-it('returns valid draft output with category via polling', function () {
+it('returns a validated draft with category via polling', function () {
     $category = Category::create(['name' => 'Music', 'slug' => 'music']);
 
-    GenerateEventDraftAgent::fake([
+    EventDraftAgent::fake([
         [
             'title' => 'Music Festival 2026',
             'description' => 'An amazing music festival.',
@@ -101,7 +100,7 @@ it('returns valid draft output with category via polling', function () {
     $generationId = $response->json('data.generation_id');
 
     $statusResponse = $this->actingAs($this->user)->getJson(
-        route('organizer.ai.generations.status', ['generation' => $generationId]),
+        route('organizer.ai.generations.status', ['generationId' => $generationId]),
     );
 
     $statusResponse->assertOk()
@@ -111,8 +110,8 @@ it('returns valid draft output with category via polling', function () {
         ->assertJsonPath('data.result.category.slug', 'music');
 });
 
-it('nulls invalid category_id from AI response via polling', function () {
-    GenerateEventDraftAgent::fake([
+it('nulls an unknown category id from the AI response via polling', function () {
+    EventDraftAgent::fake([
         [
             'title' => 'Tech Conference',
             'description' => 'A tech conference.',
@@ -137,7 +136,7 @@ it('nulls invalid category_id from AI response via polling', function () {
     $generationId = $response->json('data.generation_id');
 
     $statusResponse = $this->actingAs($this->user)->getJson(
-        route('organizer.ai.generations.status', ['generation' => $generationId]),
+        route('organizer.ai.generations.status', ['generationId' => $generationId]),
     );
 
     $statusResponse->assertOk()
@@ -145,8 +144,8 @@ it('nulls invalid category_id from AI response via polling', function () {
         ->assertJsonPath('data.result.category', null);
 });
 
-it('returns valid transform output via polling', function () {
-    TransformEventFieldAgent::fake([
+it('returns a validated field transformation via polling', function () {
+    EventPolishAgent::fake([
         [
             'content' => 'A wonderful music festival featuring world-class artists and amazing performances.',
             'language' => 'en',
@@ -166,11 +165,46 @@ it('returns valid transform output via polling', function () {
     $generationId = $response->json('data.generation_id');
 
     $statusResponse = $this->actingAs($this->user)->getJson(
-        route('organizer.ai.generations.status', ['generation' => $generationId]),
+        route('organizer.ai.generations.status', ['generationId' => $generationId]),
     );
 
     $statusResponse->assertOk()
         ->assertJsonPath('data.status', 'success')
         ->assertJsonPath('data.result.content', 'A wonderful music festival featuring world-class artists and amazing performances.')
-        ->assertJsonPath('data.result.language', 'en');
+        ->assertJsonPath('data.result.language', 'en')
+        ->assertJsonPath('data.result.warnings', []);
+});
+
+it('falls back to plain JSON when the response wraps output in markdown fences', function () {
+    // The fake serializes strings as plain text; simulate a fenced payload.
+    EventDraftAgent::fake([
+        "```json\n".json_encode([
+            'title' => 'Fenced Event',
+            'description' => 'A description.',
+            'category_id' => null,
+            'marketing' => [
+                'social_post' => 'P',
+                'email_subject' => 'S',
+                'email_intro' => 'I',
+            ],
+            'missing_information' => [],
+        ])."\n```",
+    ]);
+
+    $response = $this->actingAs($this->user)->postJson(route('organizer.ai.event-drafts'), [
+        'brief' => 'A fenced event',
+        'tone' => 'professional',
+        'language' => 'en',
+    ]);
+
+    $response->assertStatus(202);
+
+    $generationId = $response->json('data.generation_id');
+
+    $this->actingAs($this->user)->getJson(
+        route('organizer.ai.generations.status', ['generationId' => $generationId]),
+    )
+        ->assertOk()
+        ->assertJsonPath('data.status', 'success')
+        ->assertJsonPath('data.result.title', 'Fenced Event');
 });

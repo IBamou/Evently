@@ -95,7 +95,11 @@ class OrganizerEventsTest extends TestCase
         $response = $this->actingAs($this->organizer)
             ->get(route('organizer.events.create'));
 
-        $response->assertOk();
+        $response->assertOk()
+            ->assertSee('Create your event')
+            ->assertSee('Event creation progress')
+            ->assertSee('Step 1 of 3')
+            ->assertSee('Create draft');
     }
 
     public function test_organizer_id_in_payload_causes_validation_error(): void

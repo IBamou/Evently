@@ -83,7 +83,7 @@ test('used ticket prevents cancellation', function () {
 
     $booking = Booking::where('event_id', $this->event->id)->first();
     $ticket = $booking->tickets()->first();
-    $ticket->update(['status' => TicketStatus::Used, 'checked_in_at' => now(), 'checked_in_by' => $this->organizer->id]);
+    $ticket->update(['status' => TicketStatus::Used, 'checked_in_at' => now()]);
 
     $this->actingAs($this->user)->post(route('bookings.cancel', $booking));
     $booking->refresh();

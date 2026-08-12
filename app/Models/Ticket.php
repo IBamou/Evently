@@ -3,28 +3,11 @@
 namespace App\Models;
 
 use App\Enums\TicketStatus;
-use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Str;
 
-/**
- * @property int $id
- * @property int $booking_id
- * @property int|null $booking_item_id
- * @property int|null $ticket_type_id
- * @property int $user_id
- * @property int $event_id
- * @property string $code
- * @property TicketStatus $status
- * @property Carbon|null $issued_at
- * @property Carbon|null $checked_in_at
- * @property int|null $checked_in_by
- * @property Carbon|null $cancelled_at
- * @property Carbon $created_at
- * @property Carbon $updated_at
- */
 class Ticket extends Model
 {
     /** @use HasFactory */
@@ -40,7 +23,6 @@ class Ticket extends Model
         'status',
         'issued_at',
         'checked_in_at',
-        'checked_in_by',
         'cancelled_at',
     ];
 
@@ -91,8 +73,4 @@ class Ticket extends Model
         return $this->belongsTo(User::class);
     }
 
-    public function checkedInBy(): BelongsTo
-    {
-        return $this->belongsTo(User::class, 'checked_in_by');
-    }
 }
