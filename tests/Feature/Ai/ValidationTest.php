@@ -1,5 +1,6 @@
 <?php
 
+use App\Ai\Agents\EventDraftAgent;
 use App\Enums\UserRole;
 use App\Models\User;
 use Illuminate\Support\Facades\Queue;
@@ -94,6 +95,16 @@ it('validates transform with valid payload', function () {
 });
 
 it('accepts draft event_context.description exactly at the configured limit', function () {
+    EventDraftAgent::fake([
+        [
+            'title' => 'Test',
+            'description' => 'Test',
+            'category_id' => null,
+            'marketing' => ['social_post' => '', 'email_subject' => '', 'email_intro' => ''],
+            'missing_information' => [],
+        ],
+    ]);
+
     $response = $this->actingAs($this->user)->postJson(route('organizer.ai.event-drafts'), [
         'brief' => 'A music concert',
         'tone' => 'professional',
