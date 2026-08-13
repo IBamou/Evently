@@ -1,157 +1,181 @@
 @php
-    // Live dashboard data (contract from the admin dashboard controller: $stats,
-    // $revenue, $ticketsIssued, $ticketsChecked, $orders, $chart, $catBars,
-    // $checkInRate, $hasEvents). Defensive defaults keep the view renderable if
-    // any variable is missing.
-    $stats ??= [];
-    $revenue ??= 0.0;
-    $ticketsIssued ??= 0;
-    $ticketsChecked ??= 0;
-    $orders ??= collect();
-    $chart ??= [];
-    $catBars ??= [];
-    $checkInRate ??= null;
-    $hasEvents ??= ($stats['total'] ?? 0) > 0;
+    $platformStats ??= [];
+    $attentionItems ??= [];
+    $eventPipeline ??= collect();
+    $paymentHealth ??= collect();
+    $underReviewEvents ??= collect();
+    $recentBookings ??= collect();
 
-    // 4 KPI cards (real values; design-style deltas only appear once there is data).
-    $kpis = [
-        ['label' => 'Revenue', 'value' => number_format($revenue) . ' MAD',
-         'delta' => $revenue > 0 ? '+12.4% vs last period' : 'No sales yet',
-         'deltaFg' => $revenue > 0 ? 'var(--ok)' : 'var(--muted)',
-         'iconBg' => 'var(--chip)', 'iconFg' => 'var(--primary)',
-         'icon' => 'M12 2v20M17 6H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6'],
-        ['label' => 'Tickets sold', 'value' => number_format($ticketsIssued),
-         'delta' => $ticketsChecked . ' checked in', 'deltaFg' => 'var(--muted)',
-         'iconBg' => 'rgba(20,184,166,.12)', 'iconFg' => 'var(--teal)',
-         'icon' => 'M3 9V7a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v2a2 2 0 0 0 0 6v2a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-6z'],
-        ['label' => 'Live events', 'value' => number_format($stats['published'] ?? 0),
-         'delta' => ($stats['underReview'] ?? 0) . ' awaiting approval',
-         'deltaFg' => ($stats['underReview'] ?? 0) > 0 ? 'var(--warn)' : 'var(--muted)',
-         'iconBg' => 'rgba(14,165,233,.12)', 'iconFg' => 'var(--cyan)',
-         'icon' => 'M8 2v4M16 2v4M3 10h18M5 6h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z'],
-        ['label' => 'Check-in rate', 'value' => $checkInRate !== null ? round($checkInRate) . '%' : '—',
-         'delta' => $checkInRate !== null ? $ticketsChecked . ' scanned' : 'No check-ins yet',
-         'deltaFg' => 'var(--muted)',
-         'iconBg' => 'rgba(22,163,74,.12)', 'iconFg' => 'var(--ok)',
-         'icon' => 'M20 6 9 17l-5-5'],
+    $summaryCards = [
+        ['label' => 'Gross volume', 'value' => number_format((float) ($platformStats['gross_revenue'] ?? 0)) . ' MAD', 'detail' => number_format($platformStats['confirmed_bookings'] ?? 0) . ' confirmed bookings', 'tone' => 'bg-blue-50 text-blue-700 dark:bg-blue-500/10 dark:text-blue-300'],
+        ['label' => 'Live events', 'value' => number_format($platformStats['live_events'] ?? 0), 'detail' => number_format($eventPipeline->get('under_review', 0)) . ' awaiting review', 'tone' => 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300'],
+        ['label' => 'Organizers', 'value' => number_format($platformStats['organizers'] ?? 0), 'detail' => 'Creating events on Evently', 'tone' => 'bg-violet-50 text-violet-700 dark:bg-violet-500/10 dark:text-violet-300'],
+        ['label' => 'Customers', 'value' => number_format($platformStats['customers'] ?? 0), 'detail' => 'Registered attendee accounts', 'tone' => 'bg-cyan-50 text-cyan-700 dark:bg-cyan-500/10 dark:text-cyan-300'],
     ];
 
-    // Status â†’ [badgeBg, badgeFg] (canonical design pairs).
-    $statusMap = [
-        'Paid' => ['rgba(22,163,74,.12)', 'var(--ok)'],
-        'Pending' => ['rgba(217,119,6,.14)', 'var(--warn)'],
-        'Cancelled' => ['rgba(220,38,38,.12)', 'var(--err)'],
-        'Expired' => ['rgba(91,119,148,.16)', 'var(--muted)'],
+    $attentionTotal = array_sum($attentionItems);
+    $pipelineTotal = max(1, $eventPipeline->only(['draft', 'under_review', 'published', 'cancelled'])->sum());
+    $bookingStatusClasses = [
+        'confirmed' => 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300',
+        'pending' => 'bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300',
+        'cancelled' => 'bg-red-50 text-red-700 dark:bg-red-500/10 dark:text-red-300',
+        'expired' => 'bg-slate-100 text-slate-600 dark:bg-slate-500/10 dark:text-slate-300',
     ];
 @endphp
 
 <x-app-layout :activeNav="'odash'">
+    <div class="mx-auto w-full max-w-[1380px] px-4 py-7 sm:px-6 lg:px-8 lg:py-9">
+        <div class="mb-7 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+                <div class="mb-2 flex items-center gap-2 text-xs font-extrabold uppercase tracking-[0.16em] text-blue-600 dark:text-blue-300">
+                    <span class="h-2 w-2 rounded-full bg-blue-600 dark:bg-blue-300"></span>
+                    Platform operations
+                </div>
+                <h1 class="m-0 text-3xl font-extrabold tracking-tight text-slate-950 dark:text-white">Admin command center</h1>
+                <p class="mt-2 text-sm font-medium text-slate-500 dark:text-slate-400">Moderation, payments and platform health in one place.</p>
+            </div>
 
-    <div style="max-width:1380px;margin:0 auto;padding:30px 26px 60px">
-        {{-- Header row: h1 + sub. The design's range tabs were dead <button type="button">s — removed (dead UI). --}}
-        <div style="margin-bottom:24px">
-            <h1 style="margin:0 0 6px;font-size:28px;font-weight:800;letter-spacing:-.9px">Platform dashboard</h1>
-            <p style="margin:0;color:var(--muted);font-size:14.5px">Live sales across your events &middot; last 30 days</p>
+            <div class="flex flex-wrap gap-2">
+                <a href="{{ route('admin.events.index') }}" class="inline-flex min-h-11 items-center rounded-xl bg-blue-600 px-4 text-sm font-bold text-white shadow-sm hover:bg-blue-700 hover:text-white">Review events</a>
+                <a href="{{ route('admin.payments.index') }}" class="inline-flex min-h-11 items-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-700 hover:bg-slate-50 hover:text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800">Payments</a>
+            </div>
         </div>
 
-        @if(! $hasEvents)
-            {{-- Empty state: no events on the platform yet — full-page dashed card (mirrors organizer). --}}
-            <div style="border:2px dashed var(--border);border-radius:18px;padding:60px 26px;text-align:center;background:var(--surface)">
-                <div style="font-size:17px;font-weight:800;margin-bottom:6px">No events yet</div>
-                <div style="font-size:14px;color:var(--muted);margin-bottom:16px">Events submitted by organizers will appear here, and platform stats will start filling in.</div>
+        <section aria-labelledby="attention-heading" class="mb-6 overflow-hidden rounded-2xl border border-amber-200 bg-amber-50/80 dark:border-amber-500/20 dark:bg-amber-500/5">
+            <div class="grid gap-4 p-5 lg:grid-cols-[1.1fr_2fr] lg:items-center lg:p-6">
+                <div>
+                    <p class="mb-1 text-xs font-extrabold uppercase tracking-[0.14em] text-amber-700 dark:text-amber-300">Needs attention</p>
+                    <h2 id="attention-heading" class="m-0 text-2xl font-extrabold text-slate-950 dark:text-white">{{ number_format($attentionTotal) }} open {{ Str::plural('item', $attentionTotal) }}</h2>
+                    <p class="mt-2 text-sm font-medium text-slate-600 dark:text-slate-400">Resolve the platform’s operational queue before reviewing analytics.</p>
+                </div>
+                <div class="grid gap-3 sm:grid-cols-3">
+                    <a href="{{ route('admin.events.index') }}" class="rounded-xl border border-amber-200 bg-white p-4 hover:border-amber-300 dark:border-amber-500/20 dark:bg-slate-900">
+                        <span class="block text-2xl font-extrabold text-slate-950 dark:text-white">{{ number_format($attentionItems['event_reviews'] ?? 0) }}</span>
+                        <span class="mt-1 block text-xs font-bold text-slate-500 dark:text-slate-400">Event reviews</span>
+                    </a>
+                    <a href="{{ route('admin.payments.index') }}" class="rounded-xl border border-amber-200 bg-white p-4 hover:border-amber-300 dark:border-amber-500/20 dark:bg-slate-900">
+                        <span class="block text-2xl font-extrabold text-slate-950 dark:text-white">{{ number_format($attentionItems['pending_payments'] ?? 0) }}</span>
+                        <span class="mt-1 block text-xs font-bold text-slate-500 dark:text-slate-400">Pending payments</span>
+                    </a>
+                    <a href="{{ route('admin.payments.index') }}" class="rounded-xl border border-red-200 bg-white p-4 hover:border-red-300 dark:border-red-500/20 dark:bg-slate-900">
+                        <span class="block text-2xl font-extrabold text-red-600 dark:text-red-300">{{ number_format($attentionItems['failed_payments'] ?? 0) }}</span>
+                        <span class="mt-1 block text-xs font-bold text-slate-500 dark:text-slate-400">Failed payments</span>
+                    </a>
+                </div>
             </div>
-        @else
-            {{-- KPI cards --}}
-            <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;margin-bottom:20px">
-                @foreach($kpis as $k)
-                    <div style="background:var(--surface);border:1px solid var(--border);border-radius:17px;padding:18px;animation:up .5s ease both">
-                        <div style="display:flex;align-items:center;gap:9px;margin-bottom:12px">
-                            <span style="width:32px;height:32px;border-radius:10px;background:{{ $k['iconBg'] }};display:grid;place-items:center;color:{{ $k['iconFg'] }}">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="{{ $k['icon'] }}"></path></svg>
-                            </span>
-                            <span style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.6px">{{ $k['label'] }}</span>
-                        </div>
-                        <div style="font-size:27px;font-weight:800;letter-spacing:-1px">{{ $k['value'] }}</div>
-                        <div style="font-size:12px;font-weight:700;color:{{ $k['deltaFg'] }};margin-top:5px">{{ $k['delta'] }}</div>
-                    </div>
-                @endforeach
-            </div>
+        </section>
 
-            {{-- Charts row: Revenue & tickets + Sales by category --}}
-            <div style="display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:18px;margin-bottom:20px;align-items:start">
-                <div style="background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:22px">
-                    <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px">
-                        <h2 style="margin:0;font-size:16px;font-weight:800">Revenue &amp; tickets</h2>
-                        <div style="flex:1"></div>
-                        <div style="display:flex;gap:14px">
-                            @foreach([['label' => 'Revenue', 'color' => 'var(--primary)'], ['label' => 'Tickets', 'color' => 'var(--border)']] as $l)
-                                <span style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:var(--muted)"><span style="width:9px;height:9px;border-radius:3px;background:{{ $l['color'] }}"></span>{{ $l['label'] }}</span>
-                            @endforeach
-                        </div>
+        <section aria-label="Platform overview" class="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            @foreach ($summaryCards as $card)
+                <article class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900">
+                    <div class="mb-4 flex items-center justify-between gap-3">
+                        <span class="text-xs font-extrabold uppercase tracking-[0.1em] text-slate-500 dark:text-slate-400">{{ $card['label'] }}</span>
+                        <span class="h-8 w-8 rounded-lg {{ $card['tone'] }}"></span>
                     </div>
-                    @if(count($chart))
-                        <div style="display:flex;align-items:flex-end;gap:12px;height:190px;padding-bottom:6px">
-                            @foreach($chart as $c)
-                                <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:8px;height:100%;justify-content:flex-end">
-                                    <div style="width:100%;display:flex;gap:4px;align-items:flex-end;height:100%">
-                                        <div title="{{ $c['revLabel'] }}" style="flex:1;height:{{ $c['revH'] }};border-radius:6px 6px 0 0;background:linear-gradient(180deg,var(--primary),var(--cyan));transition:height .7s cubic-bezier(.22,1,.36,1)"></div>
-                                        <div title="{{ $c['tixLabel'] }}" style="flex:1;height:{{ $c['tixH'] }};border-radius:6px 6px 0 0;background:var(--chip);border:1px solid var(--border);transition:height .7s cubic-bezier(.22,1,.36,1)"></div>
-                                    </div>
-                                    <span style="font-size:11px;font-weight:700;color:var(--muted)">{{ $c['label'] }}</span>
-                                </div>
-                            @endforeach
-                        </div>
-                    @else
-                        <div style="padding:60px 20px;text-align:center;color:var(--muted);font-size:13.5px;font-weight:600">No sales yet</div>
-                    @endif
-                </div>
-                <div style="background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:22px">
-                    <h2 style="margin:0 0 16px;font-size:16px;font-weight:800">Sales by category</h2>
-                    @if(count($catBars))
-                        <div style="display:flex;flex-direction:column;gap:14px">
-                            @foreach($catBars as $b)
-                                <div>
-                                    <div style="display:flex;justify-content:space-between;font-size:12.5px;font-weight:700;margin-bottom:6px"><span>{{ $b['label'] }}</span><span style="color:var(--muted)">{{ $b['value'] }}</span></div>
-                                    <div style="height:8px;border-radius:99px;background:var(--chip);overflow:hidden"><div style="height:100%;width:{{ $b['pct'] }};border-radius:99px;background:{{ $b['color'] }};transition:width .8s ease"></div></div>
-                                </div>
-                            @endforeach
-                        </div>
-                    @else
-                        <div style="padding:60px 20px;text-align:center;color:var(--muted);font-size:13.5px;font-weight:600">No sales yet</div>
-                    @endif
-                </div>
-            </div>
+                    <div class="text-2xl font-extrabold tracking-tight text-slate-950 dark:text-white">{{ $card['value'] }}</div>
+                    <p class="mb-0 mt-2 text-xs font-semibold text-slate-500 dark:text-slate-400">{{ $card['detail'] }}</p>
+                </article>
+            @endforeach
+        </section>
 
-            {{-- Recent orders table --}}
-            <div style="background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:22px">
-                <h2 style="margin:0 0 16px;font-size:16px;font-weight:800">Recent orders</h2>
-                <div style="display:grid;grid-template-columns:1.4fr 1.6fr .7fr .8fr .8fr;gap:12px;padding:0 4px 10px;border-bottom:1px solid var(--border);font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.7px;color:var(--muted)">
-                    <span>Buyer</span><span>Event</span><span>Tickets</span><span>Total</span><span>Status</span>
+        <div class="mb-6 grid gap-6 xl:grid-cols-[1.25fr_.75fr]">
+            <section class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900 sm:p-6">
+                <div class="mb-5 flex items-center justify-between gap-4">
+                    <div>
+                        <h2 class="m-0 text-lg font-extrabold text-slate-950 dark:text-white">Approval queue</h2>
+                        <p class="mb-0 mt-1 text-xs font-semibold text-slate-500 dark:text-slate-400">Newest organizer submissions</p>
+                    </div>
+                    <a href="{{ route('admin.events.index') }}" class="text-xs font-extrabold text-blue-600 dark:text-blue-300">View all</a>
                 </div>
-                @forelse($orders as $o)
-                    @php
-                        [$badgeBg, $badgeFg] = $statusMap[$o['status']] ?? ['rgba(91,119,148,.16)', 'var(--muted)'];
-                    @endphp
-                    <div style="display:grid;grid-template-columns:1.4fr 1.6fr .7fr .8fr .8fr;gap:12px;padding:13px 4px;border-bottom:1px solid var(--border);align-items:center;font-size:13.5px">
-                        <div style="display:flex;align-items:center;gap:10px;min-width:0">
-                            <span style="width:30px;height:30px;flex:0 0 auto;border-radius:50%;background:linear-gradient(135deg,#0EA5E9,#1565D8);color:#fff;display:grid;place-items:center;font-size:11px;font-weight:800">{{ $o['initial'] }}</span>
-                            <span style="font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ $o['buyer'] }}</span>
+
+                <div class="flex flex-col gap-3">
+                    @forelse ($underReviewEvents as $event)
+                        <article class="flex flex-col gap-3 rounded-xl border border-slate-100 bg-slate-50/70 p-4 dark:border-slate-700 dark:bg-slate-800/60 sm:flex-row sm:items-center">
+                            <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-sm font-extrabold text-amber-700 dark:bg-amber-500/10 dark:text-amber-300">{{ Str::upper(Str::substr($event->title, 0, 1)) }}</div>
+                            <div class="min-w-0 flex-1">
+                                <h3 class="m-0 truncate text-sm font-extrabold text-slate-900 dark:text-white">{{ $event->title }}</h3>
+                                <p class="mb-0 mt-1 truncate text-xs font-semibold text-slate-500 dark:text-slate-400">{{ $event->organizer?->name }} · {{ $event->category?->name }} · {{ $event->city }}</p>
+                            </div>
+                            <span class="w-fit rounded-lg bg-amber-100 px-2.5 py-1.5 text-[11px] font-extrabold uppercase tracking-wide text-amber-700 dark:bg-amber-500/10 dark:text-amber-300">Review</span>
+                        </article>
+                    @empty
+                        <div class="rounded-xl border border-dashed border-slate-200 px-5 py-10 text-center dark:border-slate-700">
+                            <p class="m-0 text-sm font-extrabold text-slate-800 dark:text-slate-200">Approval queue is clear</p>
+                            <p class="mb-0 mt-1 text-xs font-semibold text-slate-500 dark:text-slate-400">New submissions will appear here.</p>
                         </div>
-                        <span style="color:var(--muted);font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ $o['event'] }}</span>
-                        <span style="font-weight:700">{{ $o['qty'] }}</span>
-                        <span style="font-weight:800">{{ number_format((float) $o['total']) . ' MAD' }}</span>
-                        <span><span style="padding:5px 10px;border-radius:8px;font-size:11px;font-weight:800;text-transform:uppercase;background:{{ $badgeBg }};color:{{ $badgeFg }}">{{ $o['status'] }}</span></span>
-                    </div>
-                @empty
-                    <div style="display:grid;grid-template-columns:1.4fr 1.6fr .7fr .8fr .8fr;gap:12px;padding:40px 4px;align-items:center">
-                        <div style="grid-column:1/-1;text-align:center;color:var(--muted);font-size:13.5px;font-weight:600">
-                            No bookings yet
-                            <a href="{{ route('admin.bookings.index') }}" style="margin-left:8px;color:var(--primary);font-weight:700;text-decoration:none">Browse bookings</a>
+                    @endforelse
+                </div>
+            </section>
+
+            <section class="rounded-2xl border border-slate-200 bg-slate-950 p-5 text-white shadow-sm dark:border-slate-700 sm:p-6">
+                <div class="mb-6">
+                    <p class="mb-1 text-xs font-extrabold uppercase tracking-[0.14em] text-blue-300">Platform health</p>
+                    <h2 class="m-0 text-lg font-extrabold">Payment reliability</h2>
+                </div>
+                <div class="mb-6 flex items-end gap-2">
+                    <span class="text-4xl font-extrabold tracking-tight">{{ $paymentHealth->get('success_rate') !== null ? number_format($paymentHealth->get('success_rate'), 1) . '%' : '—' }}</span>
+                    <span class="pb-1 text-xs font-bold text-slate-400">successful payments</span>
+                </div>
+                <dl class="grid grid-cols-2 gap-3">
+                    @foreach ([['label' => 'Succeeded', 'key' => 'succeeded'], ['label' => 'Pending', 'key' => 'pending'], ['label' => 'Failed', 'key' => 'failed'], ['label' => 'Refunded', 'key' => 'refunded']] as $payment)
+                        <div class="rounded-xl border border-white/10 bg-white/5 p-3">
+                            <dt class="text-[11px] font-bold text-slate-400">{{ $payment['label'] }}</dt>
+                            <dd class="mb-0 mt-1 text-xl font-extrabold">{{ number_format($paymentHealth->get($payment['key'], 0)) }}</dd>
                         </div>
+                    @endforeach
+                </dl>
+            </section>
+        </div>
+
+        <div class="grid gap-6 xl:grid-cols-[.75fr_1.25fr]">
+            <section class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900 sm:p-6">
+                <h2 class="m-0 text-lg font-extrabold text-slate-950 dark:text-white">Event pipeline</h2>
+                <p class="mb-5 mt-1 text-xs font-semibold text-slate-500 dark:text-slate-400">Distribution across every lifecycle stage</p>
+                <div class="flex flex-col gap-4">
+                    @foreach ([['label' => 'Published', 'key' => 'published', 'color' => 'bg-emerald-500'], ['label' => 'Under review', 'key' => 'under_review', 'color' => 'bg-amber-500'], ['label' => 'Draft', 'key' => 'draft', 'color' => 'bg-blue-500'], ['label' => 'Cancelled', 'key' => 'cancelled', 'color' => 'bg-red-500']] as $stage)
+                        @php($stageCount = $eventPipeline->get($stage['key'], 0))
+                        <div>
+                            <div class="mb-2 flex items-center justify-between text-xs font-bold">
+                                <span class="text-slate-700 dark:text-slate-300">{{ $stage['label'] }}</span>
+                                <span class="text-slate-500 dark:text-slate-400">{{ number_format($stageCount) }}</span>
+                            </div>
+                            <div class="h-2 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
+                                <div class="h-full rounded-full {{ $stage['color'] }}" style="width: {{ round($stageCount / $pipelineTotal * 100) }}%"></div>
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+            </section>
+
+            <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900">
+                <div class="flex items-center justify-between gap-4 border-b border-slate-100 px-5 py-5 dark:border-slate-700 sm:px-6">
+                    <div>
+                        <h2 class="m-0 text-lg font-extrabold text-slate-950 dark:text-white">Recent bookings</h2>
+                        <p class="mb-0 mt-1 text-xs font-semibold text-slate-500 dark:text-slate-400">Latest marketplace activity</p>
                     </div>
-                @endforelse
-            </div>
-        @endif
+                    <a href="{{ route('admin.bookings.index') }}" class="text-xs font-extrabold text-blue-600 dark:text-blue-300">All bookings</a>
+                </div>
+                <div class="divide-y divide-slate-100 dark:divide-slate-700">
+                    @forelse ($recentBookings as $booking)
+                        <article class="grid gap-3 px-5 py-4 sm:grid-cols-[1fr_1fr_auto] sm:items-center sm:px-6">
+                            <div class="min-w-0">
+                                <p class="m-0 truncate text-sm font-extrabold text-slate-900 dark:text-white">{{ $booking->user?->name ?? 'Unknown customer' }}</p>
+                                <p class="mb-0 mt-1 text-xs font-semibold text-slate-500 dark:text-slate-400">{{ $booking->reference }} · {{ $booking->items_count }} {{ Str::plural('line', $booking->items_count) }}</p>
+                            </div>
+                            <p class="m-0 truncate text-xs font-bold text-slate-600 dark:text-slate-300">{{ $booking->event?->title ?? 'Deleted event' }}</p>
+                            <div class="flex items-center justify-between gap-3 sm:justify-end">
+                                <span class="text-sm font-extrabold text-slate-900 dark:text-white">{{ number_format((float) $booking->total) }} {{ $booking->currency }}</span>
+                                <span class="rounded-lg px-2.5 py-1.5 text-[10px] font-extrabold uppercase tracking-wide {{ $bookingStatusClasses[$booking->status->value] ?? $bookingStatusClasses['expired'] }}">{{ $booking->status->label() }}</span>
+                            </div>
+                        </article>
+                    @empty
+                        <div class="px-5 py-12 text-center sm:px-6">
+                            <p class="m-0 text-sm font-extrabold text-slate-800 dark:text-slate-200">No bookings yet</p>
+                            <p class="mb-0 mt-1 text-xs font-semibold text-slate-500 dark:text-slate-400">Marketplace activity will appear here.</p>
+                        </div>
+                    @endforelse
+                </div>
+            </section>
+        </div>
     </div>
-
 </x-app-layout>

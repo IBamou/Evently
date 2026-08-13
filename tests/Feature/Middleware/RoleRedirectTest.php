@@ -36,7 +36,7 @@ it('redirects admins to the platform dashboard', function () {
     $this->actingAs($admin)
         ->get(route('admin.dashboard'))
         ->assertOk()
-        ->assertSee('Platform dashboard');
+        ->assertSee('Admin command center');
 });
 
 it('redirects guests to sign in', function () {

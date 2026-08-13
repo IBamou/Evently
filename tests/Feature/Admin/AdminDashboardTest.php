@@ -1,6 +1,7 @@
 <?php
 
 use App\Enums\BookingStatus;
+use App\Enums\EventStatus;
 use App\Enums\PaymentStatus;
 use App\Enums\TicketStatus;
 use App\Models\Booking;
@@ -86,11 +87,38 @@ it('allows admin to view the platform dashboard', function () {
     $response = $this->actingAs($this->admin)->get(route('admin.dashboard'));
 
     $response->assertOk();
-    $response->assertSee('Platform dashboard');
-    $response->assertSee('Revenue');
-    $response->assertSee('Tickets sold');
+    $response->assertSee('Admin command center');
+    $response->assertSee('Needs attention');
+    $response->assertSee('Gross volume');
     $response->assertSee('Live events');
-    $response->assertSee('Check-in rate');
+    $response->assertSee('Payment reliability');
+    $response->assertSee('Approval queue');
+    $response->assertDontSee('+ New event');
+});
+
+it('displays platform operations and moderation data', function () {
+    Event::factory()->underReview()->create([
+        'organizer_id' => $this->organizer->id,
+        'title' => 'Awaiting Platform Review',
+    ]);
+
+    Payment::factory()->create([
+        'booking_id' => $this->booking->id,
+        'status' => PaymentStatus::Failed,
+        'amount' => 125,
+    ]);
+
+    $response = $this->actingAs($this->admin)->get(route('admin.dashboard'));
+
+    $response->assertOk();
+    $response->assertSee('Awaiting Platform Review');
+    $response->assertSee('Failed payments');
+    $response->assertSee('Event pipeline');
+
+    expect($response->viewData('attentionItems')['event_reviews'])->toBe(1)
+        ->and($response->viewData('attentionItems')['failed_payments'])->toBe(1)
+        ->and($response->viewData('eventPipeline')->get(EventStatus::Published->value))->toBe(1)
+        ->and($response->viewData('platformStats')['organizers'])->toBe(1);
 });
 
 it('displays real data on the admin dashboard', function () {
@@ -100,7 +128,7 @@ it('displays real data on the admin dashboard', function () {
     $response->assertSee('600');
     $response->assertSee('John Buyer');
     $response->assertSee('2');
-    $response->assertSee('Paid');
+    $response->assertSee('Confirmed');
 });
 
 it('forbids organizer from accessing the admin dashboard', function () {
